@@ -76,12 +76,28 @@ export function wsTransport(room, isHost, h) {
   return tr;
 }
 
+// Keeps the screen on while a game page is open: turn-based play can go minutes without a touch, and a laptop
+// that sleeps takes the TV with it. Needs a secure context (GitHub Pages, localhost); some browsers only grant it
+// after a tap, so it asks again on each one until it holds the lock.
+export function keepAwake() {
+  if (!('wakeLock' in navigator)) return;
+  let lock = null;
+  const get = async () => {
+    if (lock || document.visibilityState !== 'visible') return;
+    try { lock = await navigator.wakeLock.request('screen'); lock.addEventListener('release', () => { lock = null; }); } catch (e) {}
+  };
+  get();
+  document.addEventListener('visibilitychange', get);
+  addEventListener('pointerdown', get, { passive: true });
+}
+
 const transport = (net, room, isHost, h) => (net === 'local' ? localTransport : wsTransport)(room, isHost, h);
 const backoff = n => Math.min(8000, 500 * 2 ** n);
 
 // The board's side. seats: the seat names, e.g. ['keeper', 'navigator']. Calls onSeats() whenever who-sits-where
 // or who-is-connected changes, and onAction(seat, body) for each action from a seated phone.
 export function hostRoom({ game, seats, onSeats, onAction, onStatus = () => {} }) {
+  keepAwake();
   const net = param('net') === 'local' ? 'local' : 'ws';
   const room = (param('room') || load(`coop-room-${game}`) || randCode()).toUpperCase();
   save(`coop-room-${game}`, room);
@@ -142,6 +158,7 @@ export function hostRoom({ game, seats, onSeats, onAction, onStatus = () => {} }
 
 // A phone's side. Keeps trying to reach the board until it gets a seat, and again whenever the connection drops.
 export function joinRoom({ room, name = '', want = null, onSeat, onMessage, onStatus = () => {} }) {
+  keepAwake();
   const net = param('net') === 'local' ? 'local' : 'ws';
   let cid = param('cid') || load('coop-cid');
   if (!cid) { cid = Math.random().toString(36).slice(2, 10); save('coop-cid', cid); }

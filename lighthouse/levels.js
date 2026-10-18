@@ -1,5 +1,7 @@
-// Bays, easiest first. oil = turns available; hull = knocks the boat can take. Drifter paths loop: N E S W, or '.'
-// to hold still for a turn. test/lighthouse.test.mjs checks every bay is solvable inside its oil.
+// Bays, easiest first, each adding one idea. oil = turns available; hull = knocks the boat can take. Drifter paths
+// loop: N E S W, or '.' to hold still for a turn. buoys = markers the keeper may drop; sonar = the navigator can
+// ping. tips[turn] = {keeper, navigator}: coaching shown on the phones and the TV that turn.
+// test/lighthouse.test.mjs checks every bay is solvable inside its oil.
 export const LEVELS = [
   {
     name: 'First Light',
@@ -16,6 +18,14 @@ export const LEVELS = [
       '#...##....#',
       '###########',
     ],
+    tips: {
+      1: { keeper: 'Tap the water a little ahead of the boat, then press Light the lamp. The navigator only sees what you light.',
+           navigator: 'Watch the TV. Once the keeper lights the water, tap up to 3 arrows, then Sail.' },
+      2: { keeper: 'The ⚓ on your map is the harbour, and only you can see it. Say the way out loud: “right two, then down”.',
+           navigator: 'Grey squares are rocks. Sailing into one costs 1 hull ❤️.' },
+      3: { keeper: 'The › arrows are a current. It pushes the boat one extra square, which saves oil.',
+           navigator: 'Not sure? Ask the keeper what is past the light before you sail.' },
+    },
   },
   {
     name: 'Ice Floes',
@@ -37,6 +47,12 @@ export const LEVELS = [
       { at: [10, 1], path: 'SS.NN.' },
       { at: [6, 6], path: 'E.WW.E' },
     ],
+    tips: {
+      1: { keeper: 'Floes 🧊 drift once the boat has sailed. The dashed ring shows where each goes next. Light them so the navigator can see them.',
+           navigator: 'A faded 🧊 on the TV is where a floe was last seen; its arrow shows which way it was drifting.' },
+      2: { keeper: 'A floe that hits the boat costs 1 hull. Warn the navigator before it drifts into the path.',
+           navigator: 'You can choose Wait as a move to let a floe drift past.' },
+    },
   },
   {
     name: 'Whirlpool Bay',
@@ -57,5 +73,79 @@ export const LEVELS = [
       { at: [11, 1], path: 'SSSSSNNNNN' },
       { at: [6, 4], path: 'WW.EE.' },
     ],
+    tips: {
+      1: { keeper: 'Trace each current with your finger before you speak. Some loop back on themselves.',
+           navigator: 'Only 2 hull this time. Ask before you ride a current.' },
+    },
+  },
+  {
+    name: 'Marker Buoys',
+    intro: 'A dark maze of rocks. The keeper has three buoys to mark the way.',
+    hull: 3, oil: 9, buoys: 3,
+    map: [
+      '#############',
+      '#B..#...#...#',
+      '#.#...#...#.#',
+      '#.#.###.#.#.#',
+      '#...#...#...#',
+      '###.#.###.#.#',
+      '#...#...#...#',
+      '#.L.#.#...#H#',
+      '#############',
+    ],
+    drifters: [
+      { at: [5, 4], path: 'EE.WW.' },
+      { at: [11, 1], path: 'SSS.NNN.' },
+    ],
+    tips: {
+      1: { keeper: 'New: buoys 🟠. Switch to Buoy and tap the map to drop one. A buoy stays on the TV for the rest of the bay: mark the turns, or a danger.',
+           navigator: 'Orange buoys 🟠 on the TV are the keeper’s markers. Agree what they mean: “turn here”, or “keep away”.' },
+    },
+  },
+  {
+    name: 'Fog Bank',
+    intro: 'A fog bank sits across the bay. The lamp cannot pierce it, and the keeper’s map is blank inside. Sonar can.',
+    hull: 3, oil: 10, sonar: true,
+    map: [
+      '#############',
+      '#B..#......##',
+      '#.#.#.####..#',
+      '#.#..fffff#.#',
+      '#...ffrfff#.#',
+      '###.ffffrf..#',
+      '#...frffff#.#',
+      '#.L..ff...#H#',
+      '#############',
+    ],
+    tips: {
+      1: { keeper: 'Grey cloud on your map is fog: you cannot see what is inside, and the lamp only shows mist there. The navigator can.',
+           navigator: 'New: sonar 📡. Press Ping to see 2 squares around the boat, even inside the fog. It uses 1 of your 3 moves.' },
+      2: { keeper: 'The way around the fog is long. Ask the navigator what the sonar found inside and plan a route through.',
+           navigator: 'Describe what the ping showed: where the reefs are and where the water is clear.' },
+    },
+  },
+  {
+    name: 'The Long Night',
+    intro: 'Everything at once: currents, floes, fog and reefs. Buoys and sonar both work here.',
+    hull: 3, oil: 8, buoys: 2, sonar: true,
+    map: [
+      '#############',
+      '#B.>>>v..#..#',
+      '#..#..v.ff..#',
+      '#.##..ffrff.#',
+      '#....#frff#.#',
+      '##.#.ffff...#',
+      '#..#.#ff>>v.#',
+      '#.L..#..#.vH#',
+      '#############',
+    ],
+    drifters: [
+      { at: [11, 1], path: 'SSSS.NNNN.' },
+      { at: [1, 4], path: 'EEE.WWW.' },
+    ],
+    tips: {
+      1: { keeper: 'Take it slowly. You know the currents and floes; the navigator’s sonar knows the fog.',
+           navigator: 'Ping when you reach the fog, then tell the keeper what you see.' },
+    },
   },
 ];

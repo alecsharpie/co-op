@@ -11,47 +11,83 @@
 <style>
   body { padding: 12px 16px calc(16px + env(safe-area-inset-bottom)); min-height: 100%; height: auto; user-select: none; -webkit-user-select: none; }
   #app { display: flex; flex-direction: column; gap: 12px; min-height: calc(100vh - 28px); }
-  .top { display: flex; align-items: center; gap: 12px; font-size: 20px; white-space: nowrap; }
+  .top { display: flex; align-items: center; gap: 10px; font-size: 19px; white-space: nowrap; }
   .top .role { font-weight: 800; font-size: 22px; }
   .top .sp { flex: 1; }
   .msg { padding: 14px 16px; border-radius: var(--radius); background: var(--panel); border: 2px solid var(--line); font-size: 19px; line-height: 1.35; }
   .msg.you { border-color: var(--accent); }
   .msg small { display: block; color: var(--ink-2); font-size: 15px; margin-top: 4px; }
+  .msg .tip { display: block; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 16px; color: var(--accent); }
   .center { margin: auto 0; text-align: center; display: flex; flex-direction: column; gap: 14px; }
   .center h1 { margin: 0; font-size: 34px; }
   input { font: inherit; font-size: 28px; padding: 14px; border-radius: var(--radius); border: 2px solid var(--line); background: var(--bg-2); color: var(--ink); text-align: center; width: 100%; }
   input.code { letter-spacing: .25em; text-transform: uppercase; font-weight: 800; }
   #map { display: grid; place-items: center; }
+  .legend { justify-content: center; font-size: 13px; gap: 4px 10px; }
+  .legend .sw { --t: 18px; }
   .tray { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .slot { height: 72px; border-radius: var(--radius); border: 2px dashed var(--line); display: grid; place-items: center; font-size: 40px; background: var(--bg-2); }
+  .tray.two { grid-template-columns: repeat(2, 1fr); }
+  .slot { height: 72px; border-radius: var(--radius); border: 2px dashed var(--line); display: grid; place-items: center; font-size: 38px; background: var(--bg-2); position: relative; }
   .slot.full { border-style: solid; background: var(--panel); }
-  .palette { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-  .palette .btn { font-size: 34px; padding: 0; min-height: 68px; }
-  .pad { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 92px); gap: 10px; }
-  .pad .btn { font-size: 46px; padding: 0; min-height: 0; }
-  .pad .wait { font-size: 22px; }
+  .slot .n { position: absolute; top: 4px; left: 8px; font-size: 13px; color: var(--ink-2); }
+  .palette { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .palette .btn { font-size: 30px; padding: 4px 0; min-height: 72px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+  .palette .btn span { font-size: 12px; color: var(--ink-2); font-weight: 600; }
+  .pad { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 80px); gap: 8px; }
+  .pad .btn { font-size: 44px; padding: 0; min-height: 0; }
+  .pad .wait { font-size: 18px; line-height: 1.15; }
   .row { display: flex; gap: 10px; }
   .row .btn { flex: 1; }
-  .big { min-height: 76px; font-size: 24px; }
-  .signals { display: flex; gap: 10px; justify-content: center; min-height: 84px; }
-  .signals .sig { width: 84px; height: 84px; font-size: 50px; display: grid; place-items: center; border-radius: 18px; background: var(--accent); }
+  .big { min-height: 76px; font-size: 23px; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .seg .btn { font-size: 18px; }
+  .signals { display: flex; gap: 10px; justify-content: center; }
+  .signals .sig { text-align: center; width: 84px; }
+  .signals .sig b { display: grid; place-items: center; height: 84px; font-size: 48px; border-radius: 18px; background: var(--accent); }
+  .signals .sig span { font-size: 14px; color: var(--ink-2); }
   .label { color: var(--ink-2); font-size: 15px; }
+  .events { display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
+  .events div { padding: 8px 10px; border-radius: 10px; background: var(--bg-2); border-left: 4px solid var(--line); }
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script type="module">
 import { joinRoom, param, load, save } from '../shared/net.js';
-import { parseLevel, SIGNALS, SIGNALS_PER_TURN, MOVES_PER_TURN } from './game.js';
-import { drawSea, SIGNAL_ICON, MOVE_ICON } from './draw.js';
+import { showHelp, helpOnce, roleCard, helpButtonHtml } from '../shared/help.js';
+import { parseLevel, SIGNALS, SIGNALS_PER_TURN } from './game.js';
+import { drawSea, legendHtml, SIGNAL_ICON, SIGNAL_WORD, MOVE_ICON } from './draw.js';
 
 const $app = document.getElementById('app');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const ROLE = { keeper: ['🗼', 'Keeper'], navigator: ['⛵', 'Navigator'] };
+const CARDS = {
+  keeper: roleCard({
+    icon: '🗼', role: 'Keeper', goal: 'Guide the boat to the harbour ⚓. Only you can see the whole bay.',
+    can: [
+      'See the whole bay: rocks, currents, the harbour, and where each floe 🧊 drifts next (the dashed ring).',
+      'Aim the lamp each turn: tap the map, then <b>Light the lamp</b>. It lights a 3×3 patch on the TV.',
+      'Drop buoys 🟠 in later bays: markers that stay on the TV.',
+      'In signals-only mode, send up to 3 symbols instead of talking.',
+    ],
+    partner: ['Steer the boat: plot up to 3 moves, then Sail.', 'Use sonar 📡 to see inside fog, in later bays.'],
+    tips: ['Give directions as they look on the TV: “two right, then down”.', 'Light the floes too, so the navigator sees them coming.'],
+  }),
+  navigator: roleCard({
+    icon: '⛵', role: 'Navigator', goal: 'Steer the boat home. You only see what is lit on the TV, so listen to the keeper.',
+    can: [
+      'Plot up to 3 moves a turn on this phone, then press <b>Sail</b>.',
+      'Choose <b>Wait</b> as a move to let a floe drift past.',
+      'Ping the sonar 📡 in fog bays: it sees 2 squares around the boat, even inside fog. It uses 1 move.',
+    ],
+    partner: ['See the whole bay and the harbour.', 'Aim the lamp, which lights the TV for you.', 'Drop buoys 🟠.'],
+    tips: ['You can plot while the keeper aims; you sail once the light is set.', 'Your plan stays secret until you sail.'],
+  }),
+};
 
 let status = 'connecting', seat = null, V = null, link = null;
 // what this phone is composing before it sends: reset when a new turn starts
-let aim = null, picks = [], plan = [], composingFor = null;
+let aim = null, buoyAim = null, tool = 'lamp', picks = [], plan = [], composingFor = null;
 
 const room = (param('room') || '').toUpperCase();
 if (!room) joinForm(); else connect(room);
@@ -75,7 +111,7 @@ function joinForm() {
 function connect(code) {
   link = joinRoom({
     room: code, name: load('coop-name', ''), want: param('want'),
-    onSeat: s => { seat = s; render(); },
+    onSeat: s => { const changed = s !== seat; seat = s; if (changed) helpOnce('lighthouse-' + s, CARDS[s]); render(); },
     onMessage: v => { V = v; render(); },
     onStatus: s => { status = s; render(); },
   });
@@ -93,79 +129,101 @@ function render() {
   }
   const [icon, name] = ROLE[seat];
   const net = status === 'open' ? '' : `<span class="chip"><span class="dot"></span>reconnecting</span>`;
-  const stats = V.started ? `<span>🛢️ ${V.oil}</span><span>❤️ ${V.hull}</span>` : '';
-  let html = `<div class="top"><span class="role">${icon} ${name}</span>${net}<span class="sp"></span>${stats}</div>`;
+  const stats = V.started && !V.lobby ? `<span title="lamp oil left">🛢️ ${V.oil}</span><span title="hull">❤️ ${V.hull}</span>` : '';
+  let html = `<div class="top"><span class="role">${icon} ${name}</span>${net}<span class="sp"></span>${stats}${helpButtonHtml()}</div>`;
 
   if (V.lobby) {
-    html += `<div class="center"><div class="msg">You are the <b>${name}</b>.<small>${seat === 'keeper'
-      ? 'You will see the whole bay here, and aim the lamp so your partner can see on the TV.'
-      : 'You will steer the boat from here. The TV shows only what is lit.'}</small></div>
+    html += `<div class="center"><div class="msg">You are the <b>${name}</b>.<small>${CARDS[seat].intro}</small></div>
+      <button class="btn" data-act="help">What can I do?</button>
       ${V.canStart ? `<button class="btn go big" data-act="start">${V.started && V.status === 'play' ? 'Resume' : 'Start'}</button>` : '<div class="label">Waiting for your partner to join…</div>'}</div>`;
   } else if (V.status && V.status !== 'play') {
-    html += `<div class="center"><div class="msg you">${V.status === 'won' ? '⚓ Home safe!' : '🌊 ' + esc(V.why)}<small>Good stopping point: progress is saved.</small></div>
-      ${V.status === 'won' ? '<button class="btn go big" data-act="next">Next bay</button>' : '<button class="btn go big" data-act="retry">Try again</button>'}</div>`;
+    html += `<div class="center"><div class="msg you">${V.status === 'won' ? `⚓ Home safe! ${'★'.repeat(V.stars)}${'☆'.repeat(3 - V.stars)}` : '🌊 ' + esc(V.why)}
+      <small>Good stopping point: progress is saved.</small></div>
+      ${V.status === 'won' && V.level < V.bays - 1 ? '<button class="btn go big" data-act="next">Next bay</button>' : ''}
+      <button class="btn big" data-act="retry">${V.status === 'won' ? 'Play this bay again' : 'Try again'}</button></div>`;
   } else {
-    const key = `${V.level}:${V.turn}`;
-    if (composingFor !== key) { composingFor = key; aim = null; picks = []; plan = []; }
+    const key = `${V.level}:${V.turn}:${V.status}`;
+    if (composingFor !== key) { composingFor = key; aim = null; buoyAim = null; tool = 'lamp'; picks = []; plan = []; }
     html += seat === 'keeper' ? keeperUI() : navigatorUI();
   }
   $app.innerHTML = html;
   if (seat === 'keeper' && V.map && !V.lobby && V.status === 'play') {
-    const lv = parseLevel({ map: V.map.rows });
+    const lv = parseLevel({ map: V.map.rows, buoys: V.maxBuoys });
     const size = Math.floor((Math.min(innerWidth, 560) - 32) / lv.w);
-    drawSea(document.getElementById('grid'), lv, { boat: V.boat, beam: V.beam }, { size, drifters: V.drifters, beam: V.phase === 'light' ? aim : V.beam });
+    const mine = V.phase === 'light' && !V.busy;
+    drawSea(document.getElementById('grid'), lv,
+      { boat: V.boat, seen: V.seen, beam: V.beam, ping: V.ping, buoys: V.buoys, trail: V.trail, marks: V.marks },
+      { size, drifters: V.drifters, beam: mine ? aim : V.beam, buoyAim: mine ? buoyAim : null });
+    document.getElementById('legend').innerHTML = legendHtml({ ...lv, drifters: V.drifters }, { tv: false });
   }
 }
+
+const lastTurn = () => V.events.length ? `<div class="events">${V.events.map(t => `<div>${esc(t)}</div>`).join('')}</div>` : '';
+const tipHtml = () => V.tip ? `<span class="tip">💡 ${esc(V.tip)}</span>` : '';
 
 function keeperUI() {
   const mine = V.phase === 'light' && !V.busy, signals = V.mode === 'signals';
   let h = `<div class="msg${mine ? ' you' : ''}">${V.busy ? 'Sailing… watch the TV.' : mine
-    ? `Tap the water to aim the lamp${signals ? ', then pick up to ' + SIGNALS_PER_TURN + ' signals' : ''}.<small>${signals ? 'Signals only: no talking about the route.' : 'Talk your partner through it.'}</small>`
-    : `Your partner is plotting a course…<small>${V.locked.navigator ? 'Locked in.' : 'Their plan is secret until they sail.'}</small>`}</div>`;
-  h += `<div id="map"><div class="board" id="grid"></div></div>`;
-  if (V.lastPlan.length && !mine) h += `<div class="label" style="text-align:center">Last turn they sailed ${V.lastPlan.map(m => MOVE_ICON[m]).join(' ')}</div>`;
+    ? `<b>Your turn.</b> ${tool === 'buoy' ? 'Tap where the buoy should go.' : 'Tap the water to aim the lamp.'}${signals ? ` Then pick up to ${SIGNALS_PER_TURN} signals.` : ''}
+       <small>${signals ? 'Signals only: no talking about the route.' : 'Talk your partner through the route.'}</small>${tipHtml()}`
+    : `${esc(V.partner.keeper)} is plotting a course…<small>${V.locked.navigator ? 'Locked in.' : 'Their plan stays secret until they sail.'}</small>`}</div>`;
+  if (mine && V.maxBuoys) h += `<div class="seg">
+    <button class="btn ${tool === 'lamp' ? 'on' : ''}" data-act="tool:lamp">🔦 Lamp</button>
+    <button class="btn ${tool === 'buoy' ? 'on' : ''}" data-act="tool:buoy" ${V.buoysLeft ? '' : 'disabled'}>🟠 Buoy · ${V.buoysLeft} left</button></div>`;
+  h += `<div id="map"><div class="board" id="grid"></div></div><div class="legend" id="legend"></div>`;
+  if (!mine && V.lastPlan.length) h += `<div class="label" style="text-align:center">Last turn they sailed ${V.lastPlan.map(m => MOVE_ICON[m]).join(' ')}</div>`;
   if (mine) {
+    h += lastTurn();
     if (signals) {
       h += `<div class="tray">${[0, 1, 2].map(i => `<div class="slot${picks[i] ? ' full' : ''}" data-act="unpick:${i}">${picks[i] ? SIGNAL_ICON[picks[i]] : ''}</div>`).join('')}</div>`;
-      h += `<div class="palette">${SIGNALS.map(s => `<button class="btn" data-act="pick:${s}" ${picks.length >= SIGNALS_PER_TURN ? 'disabled' : ''}>${SIGNAL_ICON[s]}</button>`).join('')}</div>`;
+      h += `<div class="palette">${SIGNALS.map(s => `<button class="btn" data-act="pick:${s}" ${picks.length >= SIGNALS_PER_TURN ? 'disabled' : ''}>${SIGNAL_ICON[s]}<span>${SIGNAL_WORD[s]}</span></button>`).join('')}</div>`;
+      if (picks.length) h += '<div class="label" style="text-align:center">Tap a signal above to remove it.</div>';
     }
-    h += `<button class="btn go big" data-act="light">${aim ? '🗼 Light the lamp' : 'Send without lighting'}</button>`;
+    h += `<button class="btn go big" data-act="light">${aim ? '🗼 Light the lamp' : 'Send without lighting'}${buoyAim ? ' + 🟠' : ''}</button>`;
   }
   return h;
 }
 
 function navigatorUI() {
-  const mine = V.phase === 'steer' && !V.busy;
+  const mine = V.phase === 'steer' && !V.busy, max = V.moves;
+  if (plan.length > max) plan = plan.slice(0, max);
   let h = `<div class="msg${mine ? ' you' : ''}">${V.busy ? 'Sailing… watch the TV.' : mine
-    ? `Plot up to ${MOVES_PER_TURN} moves, then sail.<small>Look at the TV: you only see what is lit.</small>`
-    : `The keeper is aiming the lamp…<small>You can start plotting; you sail once the light is set.</small>`}</div>`;
+    ? `<b>Your turn.</b> Plot up to ${max} moves, then Sail.<small>Look at the TV: you only see what is lit or right beside the boat.</small>${tipHtml()}`
+    : `${esc(V.partner.navigator)} is aiming the lamp…<small>You can start plotting now; you sail once the light is set.</small>${tipHtml()}`}</div>`;
   if (V.mode === 'signals') h += `<div class="label" style="text-align:center">Signals from the keeper</div><div class="signals">${
-    V.signals.length ? V.signals.map(s => `<div class="sig">${SIGNAL_ICON[s]}</div>`).join('') : '<div class="label" style="align-self:center">none yet</div>'}</div>`;
-  h += `<div class="tray">${[0, 1, 2].map(i => `<div class="slot${plan[i] ? ' full' : ''}">${plan[i] ? MOVE_ICON[plan[i]] : ''}</div>`).join('')}</div>`;
-  const full = plan.length >= MOVES_PER_TURN || V.busy;
-  const b = (m, ico, cls = '') => `<button class="btn ${cls}" data-act="move:${m}" ${full ? 'disabled' : ''}>${ico}</button>`;
-  h += `<div class="pad"><span></span>${b('N', '⬆️')}<span></span>${b('W', '⬅️')}${b('wait', 'Wait', 'wait')}${b('E', '➡️')}<span></span>${b('S', '⬇️')}<span></span></div>`;
+    V.signals.length ? V.signals.map(s => `<div class="sig"><b>${SIGNAL_ICON[s]}</b><span>${SIGNAL_WORD[s]}</span></div>`).join('') : '<div class="label">none yet</div>'}</div>`;
+  if (mine) h += lastTurn();
+  if (V.sonar) h += V.pinged ? '<div class="label" style="text-align:center">📡 Pinged: the green ring on the TV shows what the sonar found. Tell the keeper!</div>'
+    : `<button class="btn" data-act="ping" ${mine ? '' : 'disabled'}>📡 Ping sonar <small style="color:var(--ink-2)">· uses 1 move</small></button>`;
+  h += `<div class="tray${max === 2 ? ' two' : ''}">${Array.from({ length: max }, (_, i) => `<div class="slot${plan[i] ? ' full' : ''}"><span class="n">${i + 1}</span>${plan[i] ? MOVE_ICON[plan[i]] : ''}</div>`).join('')}</div>`;
+  const full = plan.length >= max || V.busy;
+  const b = (m, ico, cls = '', label = '') => `<button class="btn ${cls}" data-act="move:${m}" ${full ? 'disabled' : ''} aria-label="${label || m}">${ico}</button>`;
+  h += `<div class="pad"><span></span>${b('N', '⬆️', '', 'up')}<span></span>${b('W', '⬅️', '', 'left')}${b('wait', '⏸️<br>Wait', 'wait', 'wait a move')}${b('E', '➡️', '', 'right')}<span></span>${b('S', '⬇️', '', 'down')}<span></span></div>`;
+  const sail = !mine ? (V.busy ? 'Sailing…' : 'Wait for the lamp…') : !plan.length ? 'Add a move first' : `⛵ Sail ${plan.length} move${plan.length > 1 ? 's' : ''}`;
   h += `<div class="row"><button class="btn" data-act="undo" ${plan.length ? '' : 'disabled'}>↩︎ Undo</button>
-    <button class="btn go big" data-act="sail" ${mine && plan.length ? '' : 'disabled'}>⛵ Sail</button></div>`;
+    <button class="btn go big" data-act="sail" ${mine && plan.length ? '' : 'disabled'}>${sail}</button></div>`;
   return h;
 }
 
 $app.addEventListener('click', e => {
   const tile = e.target.closest('.t');
   if (tile && seat === 'keeper' && V?.phase === 'light' && !V.busy) {
-    const x = +tile.dataset.x, y = +tile.dataset.y;
-    aim = aim && aim.x === x && aim.y === y ? null : { x, y };
+    const p = { x: +tile.dataset.x, y: +tile.dataset.y };
+    if (tool === 'buoy') buoyAim = buoyAim && buoyAim.x === p.x && buoyAim.y === p.y ? null : p;
+    else aim = aim && aim.x === p.x && aim.y === p.y ? null : p;
     return render();
   }
   const a = e.target.closest('[data-act]')?.dataset.act;
   if (!a || e.target.closest('[disabled]')) return;
   if (navigator.vibrate) navigator.vibrate(10);
   const [k, v] = a.split(':');
-  if (k === 'start' || k === 'next' || k === 'retry') act({ a: k });
+  if (k === 'help') return showHelp(CARDS[seat]);
+  if (k === 'start' || k === 'next' || k === 'retry' || k === 'ping') act({ a: k });
+  else if (k === 'tool') tool = v;
   else if (k === 'pick' && picks.length < SIGNALS_PER_TURN) picks.push(v);
   else if (k === 'unpick') picks.splice(+v, 1);
-  else if (k === 'light') act({ a: 'light', beam: aim, signals: picks });
-  else if (k === 'move' && plan.length < MOVES_PER_TURN) plan.push(v);
+  else if (k === 'light') act({ a: 'light', beam: aim, signals: picks, buoy: buoyAim });
+  else if (k === 'move' && plan.length < V.moves) plan.push(v);
   else if (k === 'undo') plan.pop();
   else if (k === 'sail') act({ a: 'sail', plan });
   render();

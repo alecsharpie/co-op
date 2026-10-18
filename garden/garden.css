@@ -44,3 +44,31 @@
 .bubble { position: absolute; left: 50%; top: -14px; transform: translateX(-50%); white-space: nowrap; background: var(--ink); color: #fff; padding: 4px 10px; border-radius: 999px; font-size: 15px; font-weight: 700; z-index: 2; }
 .bubble.bad { background: var(--bad); }
 .bubble.good { background: var(--good); }
+
+/* second pass: who-can-act badges, locks, recipe book, plan list, action sheet */
+.card .line { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.rbs { display: flex; gap: 4px; flex-wrap: wrap; }
+.rb { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 999px; font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap; }
+.rb.grower { background: var(--grower); }
+.rb.cook { background: var(--cook); }
+.tag.water { background: #e3f0fb; border-color: #b9d6ee; color: #2f6487; }
+.lock { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 16px; background: rgba(243, 234, 216, .72); font-weight: 800; color: var(--ink-2); font-size: 15px; }
+.card.guide { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(233, 139, 58, .35); animation: nudge 1.6s ease-in-out infinite; }
+@keyframes nudge { 50% { box-shadow: 0 0 0 8px rgba(233, 139, 58, .12); } }
+.ticket .tk { display: flex; flex-direction: column; line-height: 1.15; }
+.ticket .tk small { color: var(--ink-2); font-size: 12px; }
+.book { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 16px; background: var(--panel); border: 2px solid var(--line); }
+.book .dishes { display: flex; flex-wrap: wrap; gap: 8px; }
+.book .rx { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); }
+.book .sum { font-size: 22px; white-space: nowrap; }
+.book .nm { font-weight: 700; }
+.book .st { font-size: 13px; }
+.book .srcs { display: flex; flex-direction: column; gap: 4px; font-size: 15px; color: var(--ink-2); }
+.book.compact { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px; cursor: pointer; }
+.book.compact .rx { padding: 4px 8px; }
+.book.compact .sum { font-size: 18px; }
+.book .more { margin-left: auto; color: var(--accent); font-weight: 800; font-size: 14px; }
+.order { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; font-size: 15px; color: var(--ink-2); }
+.order span { padding: 3px 8px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--line); white-space: nowrap; }
+.order i { font-style: normal; opacity: .6; }
+.order span.now { background: var(--accent); color: #fff; border-color: var(--accent); }

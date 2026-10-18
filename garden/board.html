@@ -14,7 +14,7 @@
   header .season { color: var(--ink-2); font-size: 18px; }
   header .sp { flex: 1; }
   main { display: grid; grid-template-columns: 1fr 330px; min-height: 0; }
-  #yard { padding: 22px; display: flex; flex-direction: column; gap: 18px; overflow: auto; }
+  #yard { padding: 22px 22px 120px; display: flex; flex-direction: column; gap: 18px; overflow: auto; }
   .area h2 { margin: 0 0 10px; font-size: 18px; color: var(--ink-2); }
   .row { display: grid; gap: 14px; }
   .beds { grid-template-columns: repeat(var(--n), 1fr); }
@@ -40,7 +40,14 @@
   .endcard h2 { font-size: 40px; margin: 0 0 10px; }
   .endcard p { font-size: 20px; color: var(--ink-2); }
   .endcard .row2 { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
-  .banner { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); padding: 12px 26px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 26px; font-weight: 800; box-shadow: 0 8px 30px rgba(0,0,0,.25); z-index: 5; }
+  .banner { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); max-width: min(900px, 80vw); text-align: center; padding: 14px 28px; border-radius: 24px; background: var(--ink); color: #fff; font-size: 24px; font-weight: 750; line-height: 1.3; box-shadow: 0 8px 30px rgba(0,0,0,.25); z-index: 5; }
+  .guide { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 16px; }
+  .guide div { padding: 8px 10px; border-radius: 12px; background: var(--bg-2); }
+  .votes { display: grid; gap: 10px; margin-top: 14px; text-align: left; }
+  .vote { padding: 12px 14px; border-radius: 14px; border: 2px solid var(--line); background: var(--panel); font-size: 17px; }
+  .vote b { font-size: 19px; }
+  .vote .who { margin-top: 6px; }
+  .order-wrap { display: flex; align-items: center; gap: 10px; }
   .banner.bad { background: var(--bad); }
   .banner.good { background: var(--good); }
 </style>
@@ -55,8 +62,10 @@
 </header>
 <main>
   <div id="yard">
+    <div class="area order-wrap"><h2 style="margin:0">Each day plays out in this order:</h2><div id="order"></div></div>
     <div class="area"><h2>🌱 The garden</h2><div class="row beds" id="beds"></div></div>
     <div class="area"><h2>🍽️ The café</h2><div class="row kitchen" id="kitchen"></div></div>
+    <div class="area"><h2>📖 Recipe book</h2><div id="book"></div></div>
   </div>
   <aside>
     <div class="stat"><span>Day</span><b id="day"></b></div>
@@ -65,6 +74,7 @@
     <div class="phase" id="phase"></div>
     <div class="log" id="log"></div>
     <div class="settings">
+      <button class="btn sm" id="howto">How to play</button>
       <button class="btn sm" id="swap">Swap roles</button>
       <button class="btn sm" id="restart">Restart season</button>
       <button class="btn sm" id="seasons">Seasons</button>
@@ -80,9 +90,10 @@
 import { hostRoom, load, save } from '../shared/net.js';
 import { renderLobby, findLan } from '../shared/lobby.js';
 import { newTurn, submit, withdraw, phaseOf, lockedIn } from '../shared/phases.js';
-import { PHASES, newSeason, resolveDay, cleanPlan, optionsFor, stations, forecast, upcoming } from './game.js';
+import { showHelp, helpOnce } from '../shared/help.js';
+import { PHASES, newSeason, resolveDay, cleanPlan, optionOf, stations, forecast, upcoming, recipeText, UPGRADES, DISHES } from './game.js';
 import { SEASONS } from './seasons.js';
-import { card, ROLE } from './draw.js';
+import { card, ROLE, recipeBook, DAY_ORDER } from './draw.js';
 
 const $ = id => document.getElementById(id);
 const SEATS = {
@@ -94,6 +105,8 @@ const room = hostRoom({ game: 'garden', seats: Object.keys(SEATS), onSeats: rend
 const KEY = `coop-garden-${room.room}`;
 // the save: everything needed to pick up at the start of the day we stopped on
 let S = load(KEY) || { season: 0, unlocked: 0, game: null, turn: newTurn(), log: [], lastDay: null, lobby: true };
+S.upgrades ||= []; // kept between seasons
+S.vote ||= null;   // {options, picks: {seat: key}} after a season is won, before the next one
 let busy = false, reveal = null; // reveal: {plans, events, i} while a day plays out
 const persist = () => save(KEY, S);
 const def = () => SEASONS[S.season];
@@ -106,22 +119,45 @@ function onStatus(st) {
 }
 
 function start(i) {
-  S.season = i; S.game = newSeason(SEASONS[i]); S.turn = newTurn(); S.lobby = false; S.lastDay = null;
+  S.season = i; S.game = newSeason(SEASONS[i], S.upgrades); S.turn = newTurn(); S.lobby = false; S.lastDay = null; S.vote = null;
   S.log = [{ kind: 'info', text: `${SEASONS[i].name}: ${SEASONS[i].intro}` }];
   persist(); render();
+  helpOnce('garden-board', HOWTO());
 }
+
+const HOWTO = () => ({
+  icon: '🌻', title: 'How to play', intro: 'Grow food, cook it and serve your customers together. One café, one score.',
+  sections: [
+    { h: 'Each day', items: [
+      'Talk it through, then each of you places <b>3 tokens</b> on your phone, in secret.',
+      `When you are both ready, the TV plays the day in this order: <b>${DAY_ORDER.join(' → ')}</b>.`,
+      'Picking comes before cooking, so the cook can pick, cook and serve all in one day.'] },
+    { h: 'Who does what', items: [
+      `${ROLE.grower.icon} <b>Grower</b>: plants seeds and waters beds. Only the grower sees the weather (rain waters every bed).`,
+      `${ROLE.cook.icon} <b>Cook</b>: picks ripe crops into the basket, cooks at the stove, serves at the counter. Only the cook sees who is coming.`,
+      '🤝 Heavy pumpkins and big feast orders need both of you on the same spot on the same day.'] },
+    { h: 'Recipes', items: def().dishes.map(d => `${recipeText(d)} ${DISHES[d].name} (${'⭐'.repeat(DISHES[d].stars)})`) },
+    { h: 'Winning', items: ['Each served order earns ⭐. Reach the season\'s target by the last day.', 'Customers leave if their order waits too long.'] },
+  ],
+});
 
 const bothSeated = () => Object.keys(SEATS).every(s => room.seat(s));
 
 function onAction(seat, a) {
   if (!a || typeof a !== 'object' || busy) return;
   const g = S.game;
-  if (a.a === 'next' && g?.status === 'won') return start(Math.min(S.season + 1, SEASONS.length - 1));
+  if (a.a === 'next' && g?.status === 'won' && !S.vote) return start(Math.min(S.season + 1, SEASONS.length - 1));
+  if (a.a === 'vote' && S.vote && seat && S.vote.options.includes(a.pick)) {
+    S.vote.picks[seat] = a.pick;
+    const p = Object.values(S.vote.picks);
+    if (p.length === 2 && p[0] === p[1]) { S.upgrades.push(p[0]); S.log.unshift({ kind: 'good', text: `${UPGRADES[p[0]].icon} ${UPGRADES[p[0]].name} built for next season.` }); return start(Math.min(S.season + 1, SEASONS.length - 1)); }
+    persist(); return render();
+  }
   if (a.a === 'retry' && g?.status === 'lost') return start(S.season);
   if (a.a === 'start' && S.lobby && bothSeated()) { if (g) { S.lobby = false; persist(); return render(); } return start(0); }
   if (!g || g.status !== 'play' || S.lobby || !seat) return;
   if (a.a === 'plan') {
-    const r = submit(PHASES, S.turn, seat, cleanPlan(seat, a.plan, def()));
+    const r = submit(PHASES, S.turn, seat, cleanPlan(seat, a.plan, def(), g));
     if (r.done) return playDay(r.done.moves); // saved once the day is over, so a reload mid-reveal replays the plan step
     S.turn = r.turn; persist(); render();
   } else if (a.a === 'unplan') {
@@ -134,16 +170,21 @@ async function playDay(plans) {
   busy = true;
   const day = S.game.day, { state, events } = resolveDay(S.game, def(), plans);
   reveal = { plans, events, i: -1 };
-  banner('Plans revealed!', 'info'); render();
-  await wait(1600);
+  banner('Plans revealed! Here is how the day went…', 'info'); render();
+  await wait(2200);
   for (let i = 0; i < events.length; i++) {
     reveal.i = i; banner(events[i].text, events[i].kind); render();
-    await wait(1100);
+    await wait(1400 + 25 * events[i].text.length);
   }
+  if (!events.length) { banner('A quiet day: nobody did anything.', 'info'); await wait(1800); }
   banner(null);
   S.game = state; S.turn = newTurn(); S.lastDay = { day, events };
   S.log = [{ kind: 'info', text: `— Day ${day} —` }, ...events.filter(e => e.kind !== 'info' || e.who === 'sky'), ...S.log].slice(0, 40);
-  if (state.status === 'won') S.unlocked = Math.max(S.unlocked, Math.min(S.season + 1, SEASONS.length - 1));
+  if (state.status === 'won') {
+    S.unlocked = Math.max(S.unlocked, Math.min(S.season + 1, SEASONS.length - 1));
+    const options = Object.keys(UPGRADES).filter(k => !S.upgrades.includes(k));
+    if (!def().tutorial && S.season < SEASONS.length - 1 && options.length) S.vote = { options, picks: {} };
+  }
   reveal = null; busy = false; persist(); render();
 }
 
@@ -158,11 +199,11 @@ function cardFor(at) {
   const g = S.game, opts = { tokens: [] };
   if (reveal) {
     for (const who of ['grower', 'cook']) for (const t of reveal.plans[who] || []) if (t.at === at) {
-      const o = optionsFor(who, at, g, def()).find(o => o.verb === t.verb && (o.opt || null) === (t.opt || null));
+      const o = optionOf(who, t, g, def(), reveal.plans[who]);
       opts.tokens.push({ who, label: `${SEATS[who].tok} ${o ? o.label : t.verb}` });
     }
     const e = reveal.events[reveal.i];
-    if (e && (e.at === at || (e.at === null && at.startsWith('b')))) { opts.cls = 'hot'; if (e.at === at) opts.bubble = e; }
+    if (e && (e.at === at || (e.at === null && at.startsWith('b')))) { opts.cls = 'hot'; if (e.at === at) opts.bubble = { kind: e.kind, text: e.kind === 'good' ? '✓' : e.kind === 'bad' ? '✗' : '•' }; }
   }
   return card(at, g, def(), opts);
 }
@@ -181,20 +222,25 @@ function render() {
     $('day').textContent = `${g.day} / ${d.days}`;
     $('stars').textContent = `⭐ ${g.stars} / ${d.target}`;
     $('goal').style.width = Math.min(100, 100 * g.stars / d.target) + '%';
-    $('beds').style.setProperty('--n', d.beds.length);
-    const beds = stations(d).filter(a => a.startsWith('b')).map(cardFor).join('');
+    $('beds').style.setProperty('--n', g.beds.length);
+    const beds = stations(d, g).filter(a => a.startsWith('b')).map(cardFor).join('');
+    const book = recipeBook(d);
+    if ($('book').innerHTML !== book) $('book').innerHTML = book;
+    const step = reveal && reveal.events[reveal.i] ? ['harvest', 'plant', 'water', 'grow', 'cook', 'serve'].indexOf(reveal.events[reveal.i].step) : -1;
+    $('order').innerHTML = `<div class="order">${DAY_ORDER.map((x, i) => `<span class="${i === step ? 'now' : ''}">${x}</span>`).join('<i>→</i>')}</div>`;
     const kitchen = card('basket', g, d) + cardFor('stove') + cardFor('counter');
     if ($('beds').innerHTML !== beds) $('beds').innerHTML = beds;
     if ($('kitchen').innerHTML !== kitchen) $('kitchen').innerHTML = kitchen;
     const lk = lockedIn(PHASES, S.turn);
     $('phase').innerHTML = g.status !== 'play' ? (g.status === 'won' ? '🌻 Season complete!' : '🍂 The season is over')
       : busy ? `Day ${g.day} is playing out…<small>Watch what happens.</small>`
-      : `Day ${g.day}: plan together, then place your 3 tokens on your phones.<small>Plans stay secret until you are both ready.</small>
+      : `Day ${g.day}: talk it over, then place your 3 tokens on your phones.<small>Plans stay secret until you are both ready.</small>${guideHtml()}
          <div class="who">${Object.keys(SEATS).map(s => `<span class="chip"><span class="dot${lk[s] ? ' on' : ''}"></span>${SEATS[s].icon} ${esc(room.seat(s)?.name || SEATS[s].label)}: ${lk[s] ? 'ready' : 'planning'}</span>`).join('')}</div>`;
   }
   $('log').innerHTML = (S.log || []).slice(0, 12).map(l => `<div class="${l.kind}">${esc(l.text)}</div>`).join('');
 
   const over = g && !busy && !S.lobby && g.status !== 'play';
+  const voting = over && g.status === 'won' && S.vote;
   if (!$('end').dataset.picker || over) { $('end').classList.toggle('hidden', !over); delete $('end').dataset.picker; }
   if (over) {
     const last = S.season >= SEASONS.length - 1;
@@ -203,12 +249,25 @@ function render() {
       <p>${esc(g.why)} Served ${g.served}, missed ${g.missed}.</p>
       <p><b>Good stopping point.</b> Progress is saved; close the tab whenever you like.</p>
       <div class="row2">
-        ${g.status === 'won' && !last ? '<button class="btn go" data-act="next">Next season</button>' : ''}
+        ${voting ? voteHtml() : g.status === 'won' && !last ? '<button class="btn go" data-act="next">Next season</button>' : ''}
         ${g.status === 'won' && last ? '<p>That was every season. Fill in the playtest rubric together!</p>' : ''}
         <button class="btn" data-act="retry">${g.status === 'won' ? 'Play this season again' : 'Try again'}</button>
       </div></div>`;
   }
   sendViews();
+}
+
+function guideHtml() {
+  const G = def().guide?.[S.game.day];
+  if (!G) return '';
+  return `<div class="guide"><div>📣 ${esc(G.board)}</div>${['grower', 'cook'].map(r => `<div><b>${ROLE[r].icon} ${ROLE[r].name}:</b> ${esc(G[r].text)}</div>`).join('')}</div>`;
+}
+
+function voteHtml() {
+  const v = S.vote, p = Object.values(v.picks);
+  return `<div style="width:100%"><p><b>Build one upgrade for next season.</b> Vote on your phones: you both have to pick the same one.${p.length === 2 && p[0] !== p[1] ? '<br>You picked different ones: talk it over!' : ''}</p>
+    <div class="votes">${v.options.map(k => `<div class="vote"><b>${UPGRADES[k].icon} ${UPGRADES[k].name}</b><div>${UPGRADES[k].text}</div>
+      <div class="who">${Object.entries(v.picks).filter(([, x]) => x === k).map(([s]) => `<span class="rb ${s}">${ROLE[s].icon} ${ROLE[s].name}</span>`).join(' ')}</div></div>`).join('')}</div></div>`;
 }
 
 // Each phone gets the shared table plus its own secret: the grower the forecast, the cook tomorrow's orders.
@@ -219,7 +278,8 @@ function sendViews() {
     state: g, phase: g ? phaseOf(PHASES, S.turn)?.name : null, locked: g ? lockedIn(PHASES, S.turn) : {}, lastDay: S.lastDay,
   };
   for (const seat of Object.keys(SEATS)) room.send(seat, {
-    ...common, seat, myPlan: S.turn.got[seat] || null,
+    ...common, seat, myPlan: S.turn.got[seat] || null, guide: d && g ? d.guide?.[g.day]?.[seat] || null : null,
+    vote: S.vote ? { options: S.vote.options, mine: S.vote.picks[seat] || null, partner: S.vote.picks[seat === 'grower' ? 'cook' : 'grower'] || null } : null,
     forecast: seat === 'grower' && g ? forecast(g, d) : null,
     upcoming: seat === 'cook' && g ? upcoming(g, d) : null,
   });
@@ -234,6 +294,7 @@ document.body.addEventListener('click', e => {
   if (act?.startsWith('season:')) { $('end').classList.add('hidden'); start(+act.slice(7)); }
 });
 $('swap').onclick = () => { room.swap('grower', 'cook'); render(); };
+$('howto').onclick = () => showHelp(HOWTO());
 $('restart').onclick = () => { if (!busy) start(S.season); };
 $('seats').onclick = () => { S.lobby = true; persist(); render(); };
 $('seasons').onclick = () => {

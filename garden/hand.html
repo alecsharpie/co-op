@@ -25,6 +25,7 @@
   .secret .lab { font-weight: 800; color: var(--accent); width: 100%; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
   .wx { display: flex; flex-direction: column; align-items: center; font-size: 13px; color: var(--ink-2); min-width: 54px; }
   .wx b { font-size: 30px; line-height: 1.1; }
+  .wx.storm { color: var(--bad); font-weight: 800; }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .grid .card { min-height: 108px; padding: 10px; }
   .grid .card .big { font-size: 36px; }
@@ -46,23 +47,47 @@
   .recap { font-size: 15px; color: var(--ink-2); line-height: 1.5; }
   .recap .bad { color: var(--bad); }
   .recap .good { color: var(--good); }
+  .guidebox { padding: 12px 14px; border-radius: var(--radius); background: #fff4e6; border: 2px solid var(--accent); font-size: 17px; line-height: 1.35; }
+  .guidebox b { color: var(--accent); }
+  .say { font-size: 13px; color: var(--ink-2); width: 100%; }
+  .plan { display: flex; flex-direction: column; gap: 6px; }
+  .plan h3 { margin: 4px 0 0; font-size: 15px; color: var(--ink-2); text-transform: uppercase; letter-spacing: .04em; }
+  .pl { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 14px; background: var(--panel); border: 2px solid var(--line); cursor: pointer; }
+  .pl .n { width: 28px; height: 28px; flex: none; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 800; }
+  .pl .n.grower { background: var(--grower); } .pl .n.cook { background: var(--cook); }
+  .pl .t { font-weight: 750; font-size: 16px; }
+  .pl .c { font-size: 14px; margin-top: 2px; }
+  .ok-true { color: var(--good); } .ok-false { color: var(--bad); } .ok-null { color: #a8701f; }
+  .pl.bad { border-color: var(--bad); }
+  .sheet-wrap { position: fixed; inset: 0; z-index: 40; background: rgba(59, 46, 33, .45); display: flex; align-items: flex-end; }
+  .sheet { width: 100%; max-height: 86vh; overflow: auto; background: var(--bg-2); border-radius: 22px 22px 0 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; }
+  .sheet h2 { margin: 0; font-size: 22px; }
+  .sheet .sub { color: var(--ink-2); font-size: 15px; }
+  .opt { text-align: left; padding: 12px 14px; border-radius: 16px; border: 2px solid var(--line); background: var(--panel); cursor: pointer; display: flex; flex-direction: column; gap: 3px; min-height: 64px; }
+  .opt .l { font-size: 20px; font-weight: 800; }
+  .opt .d { font-size: 15px; color: var(--ink-2); }
+  .opt .c { font-size: 14px; font-weight: 700; }
+  .opt.cur { border-color: var(--accent); }
+  .row2 { display: flex; gap: 10px; } .row2 .btn { flex: 1; }
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script type="module">
 import { joinRoom, param, load, save } from '../shared/net.js';
-import { optionsFor, stations, TOKENS, WEATHER, DISHES } from './game.js';
+import { showHelp, helpOnce, roleCard, helpButtonHtml } from '../shared/help.js';
+import { optionsFor, optionOf, checkPlan, stations, rolesAt, isBed, bedName, TOKENS, WEATHER, DISHES, CROPS, UPGRADES, recipeText } from './game.js';
 import { SEASONS } from './seasons.js';
-import { card, ticket, ROLE } from './draw.js';
+import { card, ticket, ROLE, recipeBook, DAY_ORDER } from './draw.js';
 
 const $app = document.getElementById('app');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 let status = 'connecting', seat = null, V = null, link = null;
-// this phone's plan before it is sent: [{at, verb, opt, label}], reset each day
-let plan = [], planFor = null, sel = null; // sel: 'tray' or the index of a placed token (tap-to-place fallback)
-let drag = null, pending = false;           // while dragging, incoming views wait
+// this phone's plan before it is sent: [{at, verb, opt}], reset each day
+let plan = [], planFor = null;
+let sheet = null;               // the action picker: {at, from: 'tray' | index of a placed token}
+let drag = null, pending = false; // while dragging, incoming views wait
 
 const room = (param('room') || '').toUpperCase();
 if (!room) joinForm(); else connect(room);
@@ -95,6 +120,46 @@ function connect(code) {
 const act = body => link.act(body);
 const def = () => SEASONS[V.season];
 const locked = () => !!V.myPlan;
+const partnerOf = s => (s === 'grower' ? 'cook' : 'grower');
+
+// What this seat can do and what only the partner can, for this season's rules.
+function roleHelp(r) {
+  const d = def(), pumpkins = d.crops.includes('pumpkin'), storms = !!d.storm?.length, feasts = d.orders.some(o => o.joint);
+  const grower = [
+    '🌱 <b>Plant</b> seeds in bare beds (you choose the crop).',
+    `💧 <b>Water</b> growing crops. Each needs a number of waterings to ripen: ${d.crops.map(c => `${CROPS[c].icon} ${CROPS[c].need}`).join(', ')}.`,
+    '🔒 <b>See the weather.</b> Rain waters every bed, so tell the cook and save your tokens.',
+    ...(storms ? ['⛺ <b>Cover</b> growing crops before a ⛈️ storm, or it flattens them.'] : []),
+    ...(pumpkins ? ['💪 <b>Lift</b> ripe pumpkins: the cook must pick the same bed the same day.'] : []),
+    ...(feasts ? ['🤝 <b>Help carry</b> feast orders at the counter, the same day the cook serves.'] : []),
+  ];
+  const cook = [
+    '🧺 <b>Pick</b> ripe crops into the basket.',
+    `🍳 <b>Cook</b> at the stove from what is in the basket: ${d.dishes.map(recipeText).join(', ')}.`,
+    '🛎️ <b>Serve</b> cooked dishes to customers at the counter for ⭐.',
+    '🔒 <b>See who is coming</b> in the next two days. Tell the grower what to plant.',
+  ];
+  return roleCard({
+    icon: ROLE[r].icon, role: ROLE[r].name,
+    goal: `Together, earn ${d.target} ⭐ by serving orders before day ${d.days} ends. You share one score.`,
+    can: r === 'grower' ? grower : cook,
+    partner: r === 'grower' ? cook.map(x => x.replace('Tell the grower what to plant.', '')) : grower.filter(x => !x.startsWith('🔒')).concat('🔒 <b>See the weather.</b>'),
+    tips: [`Each day plays out in this order: ${DAY_ORDER.join(' → ')}.`,
+      r === 'grower' ? 'Planting happens after picking: you can replant a bed the cook picks today.' : 'Picking happens before cooking: you can pick, cook and serve in one day.',
+      'Tap any station to see exactly what your token would do there.'],
+  });
+}
+
+// What changed since the season before, shown once per season on each phone.
+function newThisSeason() {
+  const d = def(), p = SEASONS[V.season - 1], items = [];
+  for (const c of d.crops.filter(c => !p.crops.includes(c))) items.push(`${CROPS[c].icon} <b>${CROPS[c].name}</b> to grow: ${CROPS[c].need} waterings${CROPS[c].heavy ? ', and too heavy for one: the grower Lifts while the cook Picks, same bed, same day' : ''}.`);
+  for (const k of d.dishes.filter(k => !p.dishes.includes(k))) items.push(`New recipe: ${recipeText(k)} <b>${DISHES[k].name}</b> (${'⭐'.repeat(DISHES[k].stars)}).`);
+  if (d.wilt && d.wilt !== p.wilt) items.push(`Ripe crops wilt if nobody picks them within <b>${d.wilt} days</b>.`);
+  if (d.storm?.length && !p.storm?.length) items.push('⛈️ <b>Storms</b>: only the grower sees them coming. A storm flattens growing crops unless the grower Covers them that day.');
+  if (d.orders.some(o => o.joint) && !p.orders.some(o => o.joint)) items.push('🤝 <b>Feast orders</b>: worth more, but the grower must Help carry at the counter the day the cook serves.');
+  return { icon: '🌻', title: d.name, intro: d.intro, sections: items.length ? [{ h: 'New this season', items }] : [] };
+}
 
 function render() {
   if (drag) { pending = true; return; }
@@ -105,83 +170,117 @@ function render() {
       seat ? 'Connected. Waiting for the board…' : `Joining room ${esc(room)}…`}</div></div>`;
     return;
   }
+  if (!helpOnce(`garden-${seat}`, roleHelp(seat)) && V.started && !V.lobby && V.season > 0 && V.state?.status === "play") helpOnce(`garden-${seat}-season-${V.season}`, newThisSeason());
   const R = ROLE[seat], g = V.state;
   const net = status === 'open' ? '' : `<span class="chip"><span class="dot"></span>reconnecting</span>`;
   const stats = g ? `<span class="stats">☀️ ${g.day}/${def().days} · ⭐ ${g.stars}/${def().target}</span>` : '';
-  let html = `<div class="top"><span class="role">${R.icon} ${R.name}</span>${net}<span class="sp"></span>${stats}</div>`;
+  let html = `<div class="top"><span class="role">${R.icon} ${R.name}</span>${helpButtonHtml()}${net}<span class="sp"></span>${stats}</div>`;
 
   if (V.lobby) {
     html += `<div class="center"><div class="msg">You are the <b>${R.name}</b>.<small>${seat === 'grower'
       ? 'You plant and water the beds, and only you can see the weather forecast.'
-      : 'You harvest, cook and serve, and only you can see who is coming tomorrow.'}</small></div>
+      : 'You pick, cook and serve, and only you can see who is coming.'} Tap <b>?</b> any time to see who does what.</small></div>
       ${V.canStart ? `<button class="btn go big" data-act="start">${V.started && g?.status === 'play' ? 'Resume' : 'Start'}</button>` : '<div class="label">Waiting for your partner to join…</div>'}</div>`;
   } else if (g.status !== 'play') {
-    html += `<div class="center"><div class="msg you">${g.status === 'won' ? '🌻 Season complete!' : '🍂 ' + esc(g.why)}<small>Good stopping point: progress is saved.</small></div>
-      ${g.status === 'won' ? '<button class="btn go big" data-act="next">Next season</button>' : '<button class="btn go big" data-act="retry">Try again</button>'}</div>`;
+    html += `<div class="center"><div class="msg you">${g.status === 'won' ? '🌻 Season complete!' : '🍂 ' + esc(g.why)}<small>Good stopping point: progress is saved.</small></div>${endActions()}</div>`;
   } else {
     const key = `${V.season}:${g.day}`;
-    if (planFor !== key) { planFor = key; plan = []; sel = null; }
-    if (V.myPlan) plan = V.myPlan.map(t => ({ ...t, label: labelOf(t) }));
+    if (planFor !== key) { planFor = key; plan = []; sheet = null; }
+    if (V.myPlan) plan = V.myPlan.map(t => ({ ...t }));
     html += planner();
   }
   const top = $app.querySelector('.scroll')?.scrollTop || 0;
-  $app.innerHTML = html;
+  $app.innerHTML = html + (sheet && !V.lobby && g?.status === 'play' ? sheetHtml() : '');
   $app.classList.toggle('planning', !!$app.querySelector('.dock'));
   const sc = $app.querySelector('.scroll'); if (sc) sc.scrollTop = top;
 }
 
-const labelOf = t => (optionsFor(seat, t.at, V.state, def()).find(o => o.verb === t.verb && (o.opt || null) === (t.opt || null)) || { label: t.verb }).label;
+function endActions() {
+  const g = V.state, v = V.vote;
+  if (g.status === 'won' && v) return `<div class="msg">Build one upgrade for next season. You both have to pick the same one.${v.mine && v.partner && v.mine !== v.partner ? '<small><b>You picked different ones: talk it over!</b></small>' : v.mine ? '<small>Waiting for your partner…</small>' : ''}</div>
+    ${v.options.map(k => `<button class="opt${v.mine === k ? ' cur' : ''}" data-act="vote:${k}"><span class="l">${UPGRADES[k].icon} ${UPGRADES[k].name}${v.mine === k ? ' ✓' : ''}</span><span class="d">${UPGRADES[k].text}</span>${v.partner === k ? `<span class="c ok-true">${ROLE[partnerOf(seat)].icon} your partner picked this</span>` : ''}</button>`).join('')}`;
+  return g.status === 'won' ? '<button class="btn go big" data-act="next">Next season</button>' : '<button class="btn go big" data-act="retry">Try again</button>';
+}
+
+const stationName = at => (isBed(at) ? bedName(at) : at === 'stove' ? 'Stove' : 'Counter');
+const labelOf = t => optionOf(seat, t, V.state, def(), plan)?.label || t.verb;
+const onlyText = at => { const r = Object.keys(rolesAt(at, def())); return r.length === 1 && r[0] !== seat ? `${ROLE[r[0]].icon} ${ROLE[r[0]].name} only` : ''; };
 
 function planner() {
-  const g = V.state, d = def(), partner = seat === 'grower' ? 'cook' : 'grower';
-  let h = `<div class="scroll"><div class="msg${locked() || V.busy ? '' : ' you'}">${V.busy ? 'The day is playing out… watch the TV.'
-    : locked() ? `Locked in. ${V.locked[partner] ? 'Revealing…' : 'Waiting for your partner…'}<small>Changed your mind? You can still edit until you are both ready.</small>`
-    : `Drag your ${TOKENS} tokens onto the garden and café.<small>Tap a placed token to change or move it. ${V.locked[partner] ? '<b>Your partner is ready.</b>' : 'Your partner is planning too.'}</small>`}</div>`;
+  const g = V.state, d = def(), partner = partnerOf(seat), checks = checkPlan(seat, plan, g, d);
+  let h = '<div class="scroll">';
+  const guided = V.guide && !locked() && !V.busy;
+  if (guided) h += `<div class="guidebox">👉 <b>Your step:</b> ${esc(V.guide.text)}<small class="label" style="display:block;margin-top:6px">Tap a station to choose what to do there. ${V.locked[partner] ? '<b>Your partner is ready.</b>' : ''}</small></div>`;
+  else h += `<div class="msg${locked() || V.busy ? '' : ' you'}">${V.busy ? 'The day is playing out… watch the TV.'
+    : locked() ? `Locked in. ${V.locked[partner] ? 'Revealing…' : 'Waiting for your partner…'}<small>You can still change your plan until you are both ready.</small>`
+    : `Tap a station to choose what to do there. You have ${TOKENS} tokens a day.<small>${V.locked[partner] ? '<b>Your partner is ready.</b>' : 'Your partner is planning too. Talk it through!'}</small>`}</div>`;
   if (V.forecast) h += `<div class="secret"><span class="lab">🔒 Only you can see: the weather</span>${V.forecast.map((f, i) =>
-    `<span class="wx"><b>${WEATHER[f.w]}</b>${i === 0 ? 'today' : i === 1 ? 'tomorrow' : 'day ' + f.day}</span>`).join('')}<span class="label">Rain waters every bed.</span></div>`;
+    `<span class="wx${f.w === 'storm' ? ' storm' : ''}"><b>${WEATHER[f.w]}</b>${f.w}<br>${i === 0 ? 'today' : i === 1 ? 'tomorrow' : 'day ' + f.day}</span>`).join('')}<span class="label">🌧️ rain waters every bed${d.storm?.length ? ' · ⛈️ a storm flattens growing crops unless you cover them' : ''}</span><span class="say">🗣️ Say it out loud: the cook can't see this.</span></div>`;
   if (V.upcoming) h += `<div class="secret"><span class="lab">🔒 Only you can see: who is coming</span>${V.upcoming.length
-    ? V.upcoming.map(o => `<span>Day ${o.day}:</span>${ticket({ ...o, due: o.day + o.within - 1 }, o.day)}`).join('') : '<span class="label">Nobody new in the next two days.</span>'}</div>`;
+    ? V.upcoming.map(o => `<span>Day ${o.day}:</span>${ticket({ ...o, due: o.day + o.within - 1 }, o.day)}`).join('') : '<span class="label">Nobody new in the next two days.</span>'}<span class="say">🗣️ Say it out loud: the grower can't see this.</span></div>`;
+  h += recipeBook(d, { compact: true });
 
-  const cards = stations(d).map(at => {
-    const usable = optionsFor(seat, at, g, d).length > 0;
-    const toks = plan.map((t, i) => [t, i]).filter(([t]) => t.at === at).map(([t, i]) => ({ who: seat, label: t.label, attrs: `data-tok="${i}"`, cls: sel === i ? 'sel' : '' }));
-    return card(at, g, d, { tokens: toks, cls: (usable ? '' : 'no') + (sel !== null && usable && !locked() ? ' drop' : '') + (at === 'counter' ? ' wide' : '') });
+  const guideAt = new Set(!locked() && V.guide ? V.guide.at : []);
+  const cards = stations(d, g).map(at => {
+    const toks = plan.map((t, i) => [t, i]).filter(([t]) => t.at === at).map(([t, i]) => ({ who: seat, label: labelOf(t), attrs: `data-tok="${i}"` }));
+    return card(at, g, d, { tokens: toks, lock: optionsFor(seat, at, g, d, plan).length ? '' : onlyText(at) || 'nothing to do here', cls: (guideAt.has(at) ? 'guide' : '') + (at === 'counter' ? ' wide' : '') });
   });
-  h += `<div class="grid">${cards.slice(0, -2).join('')}${card('basket', g, d)}${cards.slice(-2).join('')}</div>`;
+  h += `<div class="grid">${cards.slice(0, -2).join('')}${card('basket', g, d, { badges: false })}${cards.slice(-2).join('')}</div>`;
 
-  if (typeof sel === 'number' && plan[sel]) h += `<div class="msg you">Selected: <b>${esc(plan[sel].label)}</b><small>Tap another spot to move it.</small>
-    <div style="display:flex;gap:10px;margin-top:10px"><button class="btn" style="flex:1" data-act="cycle">⟳ Change action</button><button class="btn" style="flex:1" data-act="takeback">↩ Take back</button></div></div>`;
+  if (plan.length) h += `<div class="plan"><h3>Your plan</h3>${plan.map((t, i) => `<div class="pl${checks[i].ok === false ? ' bad' : ''}" data-edit="${i}"><span class="n ${seat}">${i + 1}</span><div>
+    <div class="t">${esc(stationName(t.at))} · ${esc(labelOf(t))}</div><div class="c ok-${checks[i].ok}">${checks[i].ok === true ? '✓' : checks[i].ok === false ? '✗' : '🤝'} ${esc(checks[i].text)}</div></div></div>`).join('')}</div>`;
   if (V.lastDay?.events.length) h += `<div class="recap"><b>Yesterday (day ${V.lastDay.day})</b>${V.lastDay.events.map(e => `<div class="${e.kind}">${esc(e.text)}</div>`).join('')}</div>`;
   h += '</div><div class="dock">';
-  const left = TOKENS - plan.length;
-  h += `<div class="tray" data-tray="1">${left ? Array.from({ length: left }, () => `<div class="handtok ${seat}${sel === 'tray' ? ' sel' : ''}" data-hand="1">${ROLE[seat].tok}</div>`).join('')
-    : '<span class="lab">All tokens placed. Drag one back here to take it off.</span>'}</div>`;
+  const left = TOKENS - plan.length, doomed = checks.filter(c => c.ok === false).length;
+  h += `<div class="tray" data-tray="1">${left ? Array.from({ length: left }, () => `<div class="handtok ${seat}" data-hand="1">${ROLE[seat].tok}</div>`).join('') + '<span class="lab">tap a station,<br>or drag one there</span>'
+    : '<span class="lab">All 3 tokens placed. Tap one to change it.</span>'}</div>`;
   h += locked()
     ? `<button class="btn big" data-act="unplan" ${V.busy ? 'disabled' : ''}>✏️ Change my plan</button>`
-    : `<button class="btn go big" data-act="ready" ${V.busy ? 'disabled' : ''}>✓ Ready${plan.length < TOKENS ? ` (${plan.length}/${TOKENS} placed)` : ''}</button>`;
+    : `<button class="btn go big" data-act="ready" ${V.busy ? 'disabled' : ''}>✓ Ready${[plan.length < TOKENS ? `${plan.length}/${TOKENS} placed` : '', doomed ? `${doomed} won't work` : ''].filter(Boolean).map((x, i, a) => (i ? ' · ' : ' (') + x + (i === a.length - 1 ? ')' : '')).join('')}</button>`;
   return h + '</div>';
 }
 
-// --- placing tokens -------------------------------------------------------------------------------------------
-function place(at, from) { // from: 'tray' or a placed index
-  const opts = optionsFor(seat, at, V.state, def());
-  if (!opts.length || locked()) return false;
-  const o = opts[0], t = { at, verb: o.verb, ...(o.opt ? { opt: o.opt } : {}), label: o.label };
-  if (from === 'tray') { if (plan.length >= TOKENS) return false; plan.push(t); }
-  else if (plan[from].at !== at) plan[from] = t;
+// --- the action picker ----------------------------------------------------------------------------------------
+function sheetHtml() {
+  const { at, from } = sheet, g = V.state, d = def(), opts = optionsFor(seat, at, g, d, typeof from === 'number' ? plan.filter((_, i) => i !== from) : plan);
+  const editing = typeof from === 'number' ? plan[from] : null;
+  let h = `<div class="sheet-wrap" data-close="1"><div class="sheet"><h2>${esc(stationName(at))}</h2>`;
+  if (!opts.length) {
+    const r = Object.keys(rolesAt(at, d));
+    h += `<div class="sub">${r.length && !r.includes(seat) ? `Only the ${ROLE[r[0]].name.toLowerCase()} can use the ${stationName(at).toLowerCase()}. Ask them!` : 'Nothing you can do here right now.'}</div>`;
+  } else if (from === null) {
+    h += `<div class="sub">All ${TOKENS} tokens are placed. Tap one of them (or one in "Your plan") to change it, or take one back first.</div>`;
+  } else {
+    h += `<div class="sub">${editing ? 'Change this token to:' : 'What should your token do here?'}</div>`;
+    for (const o of opts) {
+      const t = { at, verb: o.verb, ...(o.opt ? { opt: o.opt } : {}) };
+      const trial = editing ? plan.map((x, i) => (i === from ? t : x)) : [...plan, t];
+      const c = checkPlan(seat, trial, g, d)[editing ? from : trial.length - 1];
+      const cur = editing && editing.verb === o.verb && (editing.opt || null) === (o.opt || null);
+      h += `<button class="opt${cur ? ' cur' : ''}" data-pick='${JSON.stringify(t)}'><span class="l">${esc(o.label)}${cur ? ' ✓' : ''}</span><span class="d">${esc(o.desc)}</span><span class="c ok-${c.ok}">${c.ok === true ? '✓' : c.ok === false ? '✗' : '🤝'} ${esc(c.text)}</span></button>`;
+    }
+  }
+  h += `<div class="row2">${editing ? '<button class="btn" data-act="takeback">↩ Take back</button>' : ''}<button class="btn" data-act="close">Close</button></div></div></div>`;
+  return h;
+}
+function openSheet(at, from) {
+  if (locked() || V.busy) return;
+  sheet = { at, from: from ?? (plan.length < TOKENS ? 'tray' : null) };
+  // one obvious choice for a new token: just place it
+  const opts = optionsFor(seat, at, V.state, def(), plan);
+  if (opts.length === 1 && sheet.from === 'tray' && from !== undefined) { pick({ at, verb: opts[0].verb, ...(opts[0].opt ? { opt: opts[0].opt } : {}) }); return; }
+  render();
+}
+function pick(t) {
+  if (sheet.from === 'tray') { if (plan.length < TOKENS) plan.push(t); }
+  else if (typeof sheet.from === 'number') plan[sheet.from] = t;
   if (navigator.vibrate) navigator.vibrate(12);
-  return true;
+  sheet = null; render();
 }
-function cycle(i) { // next option for a placed token
-  const t = plan[i], opts = optionsFor(seat, t.at, V.state, def());
-  const k = opts.findIndex(o => o.verb === t.verb && (o.opt || null) === (t.opt || null));
-  const o = opts[(k + 1) % opts.length];
-  plan[i] = { at: t.at, verb: o.verb, ...(o.opt ? { opt: o.opt } : {}), label: o.label };
-}
-const unplace = i => plan.splice(i, 1);
 
+// --- dragging tokens ------------------------------------------------------------------------------------------
 $app.addEventListener('pointerdown', e => {
-  if (!V || V.lobby || V.busy || locked()) return;
+  if (!V || V.lobby || V.busy || locked() || sheet) return;
   const el = e.target.closest('[data-hand], [data-tok]');
   if (!el) return;
   e.preventDefault();
@@ -206,37 +305,51 @@ addEventListener('pointerup', e => {
   if (!drag) return;
   const d = drag; drag = null;
   d.ghost?.remove();
-  if (!d.moved) tap(d.from);
-  else {
-    const target = document.elementFromPoint(e.clientX, e.clientY);
-    const at = target?.closest('[data-at]')?.dataset.at;
-    if (at) place(at, d.from);
-    else if (target?.closest('[data-tray]') && d.from !== 'tray') unplace(d.from);
-    sel = null;
+  quiet = true; setTimeout(() => { quiet = false; }, 0);
+  pending = false;
+  if (!d.moved) { // a tap: a placed token opens its picker; a tray token just reminds how
+    if (d.from === 'tray') { render(); return flash('Tap the station where this token should go.'); }
+    sheet = { at: plan[d.from].at, from: d.from }; return render();
   }
-  quiet = true; setTimeout(() => { quiet = false; }, 0); pending = false; render();
+  const target = document.elementFromPoint(e.clientX, e.clientY);
+  const at = target?.closest('[data-at]')?.dataset.at;
+  if (at) return openSheet(at, d.from);
+  if (target?.closest('[data-tray]') && d.from !== 'tray') plan.splice(d.from, 1);
+  render();
 });
 addEventListener('pointercancel', () => { if (drag) { drag.ghost?.remove(); drag = null; pending = false; render(); } });
 
 let quiet = false; // the click the browser fires right after a handled tap or drop is ignored
-function tap(from) { sel = sel === from ? null : from; }
+let flashTimer;
+function flash(text) {
+  const m = $app.querySelector('.msg'); if (!m) return;
+  m.innerHTML = esc(text); clearTimeout(flashTimer); flashTimer = setTimeout(render, 1800);
+}
 
 $app.addEventListener('click', e => {
   if (quiet) return;
+  if (e.target.closest('[data-pick]')) return pick(JSON.parse(e.target.closest('[data-pick]').dataset.pick));
   const a = e.target.closest('[data-act]')?.dataset.act;
   if (a && !e.target.closest('[disabled]')) {
+    if (a === 'help') return showHelp(roleHelp(seat));
+    if (a === 'book') return showHelp({ icon: '📖', title: 'Recipe book', intro: 'Every dish, and where its ingredients come from.', sections: [
+      { h: 'Dishes', items: def().dishes.map(d => `${recipeText(d)} <b>${DISHES[d].name}</b> · ${'⭐'.repeat(DISHES[d].stars)}`) },
+      { h: 'Ingredients', items: def().crops.map(c => `${CROPS[c].icon} ${CROPS[c].name}: ${ROLE.grower.icon} plants it and waters it ${CROPS[c].need}×, then ${ROLE.cook.icon} picks it${CROPS[c].heavy ? ' (with 🧑‍🌾 lifting)' : ''}.`) },
+      { h: 'Then', items: [`${ROLE.cook.icon} cooks it at the stove and serves it at the counter. All of that can happen in one day, in this order: ${DAY_ORDER.join(' → ')}.`] }] });
     if (a === 'start' || a === 'next' || a === 'retry') act({ a });
-    else if (a === 'cycle' && typeof sel === 'number') cycle(sel);
-    else if (a === 'takeback' && typeof sel === 'number') { unplace(sel); sel = null; }
-    else if (a === 'ready') { act({ a: 'plan', plan: plan.map(({ label, ...t }) => t) }); sel = null; }
+    else if (a.startsWith('vote:')) act({ a: 'vote', pick: a.slice(5) });
+    else if (a === 'close') sheet = null;
+    else if (a === 'takeback' && typeof sheet?.from === 'number') { plan.splice(sheet.from, 1); sheet = null; }
+    else if (a === 'ready') { act({ a: 'plan', plan }); sheet = null; }
     else if (a === 'unplan') act({ a: 'unplan' });
     return render();
   }
-  // tap-to-place fallback: a selected token goes to the tapped station; a tap on the tray takes it off
-  if (sel === null || locked() || V?.busy || e.target.closest('[data-hand], [data-tok]')) return;
+  if (e.target.closest('[data-close]') && !e.target.closest('.sheet')) { sheet = null; return render(); }
+  if (sheet || !V || V.lobby || V.busy || locked()) return;
+  const ed = e.target.closest('[data-edit]');
+  if (ed) { sheet = { at: plan[+ed.dataset.edit].at, from: +ed.dataset.edit }; return render(); }
   const at = e.target.closest('[data-at]')?.dataset.at;
-  if (at && place(at, sel)) { sel = null; render(); }
-  else if (e.target.closest('[data-tray]') && sel !== 'tray') { unplace(sel); sel = null; render(); }
+  if (at && at !== 'basket') { sheet = { at, from: plan.length < TOKENS ? 'tray' : null }; render(); }
 });
 </script>
 </body>

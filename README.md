@@ -10,6 +10,7 @@ talk to each other.
 |---|---|---|
 | 🗼 | [Lighthouse & Navigator](lighthouse/) | the keeper sees the whole bay, the navigator steers through the fog |
 | 🔐 | [Split-Vision Escape Room](escape/) | each phone holds half the clues; describe, cross-reference, escape |
+| 🌻 | [Two-Keeper Garden](garden/) | plan the day in secret: one grows, one cooks; one sees the weather, one the orders |
 | 🃏 | [Co-op Spire](spire/) | two decks, one enemy; pick in secret, reveal together, land the combo |
 
 ## How it fits together
@@ -31,5 +32,5 @@ npm start        # serves the repo on the home network and runs the relay locall
 npm test         # rules, level checks and relay unit tests
 ```
 
-`dev.html?game=lighthouse` (or `escape`, `spire`) shows the board and both hands side by side in one tab, no
+`dev.html?game=lighthouse` (or `escape`, `garden`, `spire`) shows the board and both hands side by side in one tab, no
 relay needed. Pages served from GitHub Pages use the deployed relay; `server/deploy.sh` redeploys it.

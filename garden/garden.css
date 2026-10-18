@@ -1,0 +1,46 @@
+/* Two-Keeper Garden: a warm, cosy daytime palette over the shared tokens. */
+:root {
+  --bg: #f3ead8;
+  --bg-2: #fbf5e9;
+  --panel: #fffaf1;
+  --line: #dfcdae;
+  --ink: #3b2e21;
+  --ink-2: #7d6851;
+  --accent: #e98b3a;
+  --accent-ink: #fff;
+  --good: #4e9a5b;
+  --bad: #c4553f;
+  --soil: #8a5a3b;
+  --leaf: #6aa45a;
+  --grower: #4e9a5b;
+  --cook: #d0703a;
+  color-scheme: light;
+}
+.lobby .code { color: var(--accent); }
+
+.card { position: relative; border-radius: 18px; background: var(--panel); border: 2px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 6px; min-height: 120px; transition: transform .2s, box-shadow .2s, border-color .2s; }
+.card .ttl { font-size: 14px; color: var(--ink-2); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; display: flex; justify-content: space-between; gap: 6px; }
+.card .big { font-size: 44px; line-height: 1; }
+.card.bed { background: linear-gradient(180deg, var(--panel) 55%, #e9d6bb 55%); }
+.card.ripe { border-color: var(--good); box-shadow: 0 0 0 3px rgba(78, 154, 91, .25); }
+.card.drop { border-color: var(--accent); border-style: dashed; }
+.card.hot { transform: scale(1.04); box-shadow: 0 6px 24px rgba(233, 139, 58, .45); border-color: var(--accent); }
+.card.no { opacity: .45; }
+.pips { display: flex; gap: 4px; }
+.pip { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--leaf); }
+.pip.on { background: var(--leaf); }
+.tag { font-size: 13px; padding: 2px 8px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); color: var(--ink-2); white-space: nowrap; }
+.tag.good { background: var(--good); color: #fff; border-color: var(--good); }
+.tag.bad { background: var(--bad); color: #fff; border-color: var(--bad); }
+.tickets { display: flex; flex-wrap: wrap; gap: 6px; }
+.ticket { display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 10px; background: #fff; border: 1px dashed var(--line); font-size: 15px; }
+.ticket .ico { font-size: 24px; }
+.ticket.joint { border: 2px solid var(--accent); }
+.ticket.urgent { background: #fde3d6; }
+.toks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+.tok { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 12px; color: #fff; font-weight: 700; font-size: 15px; }
+.tok.grower { background: var(--grower); }
+.tok.cook { background: var(--cook); }
+.bubble { position: absolute; left: 50%; top: -14px; transform: translateX(-50%); white-space: nowrap; background: var(--ink); color: #fff; padding: 4px 10px; border-radius: 999px; font-size: 15px; font-weight: 700; z-index: 2; }
+.bubble.bad { background: var(--bad); }
+.bubble.good { background: var(--good); }

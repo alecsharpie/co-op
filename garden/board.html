@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Garden · Board</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="garden.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+  body { display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
+  header { display: flex; align-items: center; gap: 14px; padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--bg-2); }
+  header h1 { margin: 0; font-size: 22px; }
+  header .season { color: var(--ink-2); font-size: 18px; }
+  header .sp { flex: 1; }
+  main { display: grid; grid-template-columns: 1fr 330px; min-height: 0; }
+  #yard { padding: 22px; display: flex; flex-direction: column; gap: 18px; overflow: auto; }
+  .area h2 { margin: 0 0 10px; font-size: 18px; color: var(--ink-2); }
+  .row { display: grid; gap: 14px; }
+  .beds { grid-template-columns: repeat(var(--n), 1fr); }
+  .kitchen { grid-template-columns: 1fr 1fr 2fr; }
+  #yard .card { min-height: 150px; }
+  #yard .card .big { font-size: 56px; }
+  #yard .ticket { font-size: 18px; padding: 6px 12px; }
+  #yard .ticket .ico { font-size: 34px; }
+  aside { border-left: 1px solid var(--line); padding: 18px; display: flex; flex-direction: column; gap: 14px; overflow: auto; background: var(--bg-2); }
+  .stat { display: flex; justify-content: space-between; align-items: baseline; font-size: 20px; }
+  .stat b { font-size: 28px; }
+  .goal { height: 14px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .goal i { display: block; height: 100%; background: var(--accent); transition: width .4s; }
+  .phase { padding: 16px; border-radius: var(--radius); background: var(--panel); border: 2px solid var(--accent); font-size: 20px; line-height: 1.35; }
+  .phase small { display: block; color: var(--ink-2); font-size: 15px; margin-top: 6px; }
+  .who { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .log { color: var(--ink-2); font-size: 15px; line-height: 1.5; }
+  .log .bad { color: var(--bad); }
+  .log .good { color: var(--good); }
+  .settings { margin-top: auto; display: flex; flex-wrap: wrap; gap: 8px; }
+  .overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(59, 46, 33, .55); z-index: 10; padding: 24px; }
+  .endcard { max-width: 640px; text-align: center; padding: 36px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 24px; }
+  .endcard h2 { font-size: 40px; margin: 0 0 10px; }
+  .endcard p { font-size: 20px; color: var(--ink-2); }
+  .endcard .row2 { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+  .banner { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); padding: 12px 26px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 26px; font-weight: 800; box-shadow: 0 8px 30px rgba(0,0,0,.25); z-index: 5; }
+  .banner.bad { background: var(--bad); }
+  .banner.good { background: var(--good); }
+</style>
+</head>
+<body>
+<header>
+  <h1>🌻 Two-Keeper Garden</h1>
+  <span class="season" id="season"></span>
+  <span class="sp"></span>
+  <span class="chip" id="net"><span class="dot"></span><span>connecting</span></span>
+  <span class="chip" id="room"></span>
+</header>
+<main>
+  <div id="yard">
+    <div class="area"><h2>🌱 The garden</h2><div class="row beds" id="beds"></div></div>
+    <div class="area"><h2>🍽️ The café</h2><div class="row kitchen" id="kitchen"></div></div>
+  </div>
+  <aside>
+    <div class="stat"><span>Day</span><b id="day"></b></div>
+    <div class="stat"><span>Stars</span><b id="stars"></b></div>
+    <div class="goal"><i id="goal"></i></div>
+    <div class="phase" id="phase"></div>
+    <div class="log" id="log"></div>
+    <div class="settings">
+      <button class="btn sm" id="swap">Swap roles</button>
+      <button class="btn sm" id="restart">Restart season</button>
+      <button class="btn sm" id="seasons">Seasons</button>
+      <button class="btn sm" id="seats">Show join code</button>
+    </div>
+  </aside>
+</main>
+<div class="banner hidden" id="banner"></div>
+<div class="overlay hidden" id="lobby"></div>
+<div class="overlay hidden" id="end"></div>
+
+<script type="module">
+import { hostRoom, load, save } from '../shared/net.js';
+import { renderLobby, findLan } from '../shared/lobby.js';
+import { newTurn, submit, withdraw, phaseOf, lockedIn } from '../shared/phases.js';
+import { PHASES, newSeason, resolveDay, cleanPlan, optionsFor, stations, forecast, upcoming } from './game.js';
+import { SEASONS } from './seasons.js';
+import { card, ROLE } from './draw.js';
+
+const $ = id => document.getElementById(id);
+const SEATS = {
+  grower: { ...ROLE.grower, label: 'Grower', blurb: 'plants and waters, and sees the weather coming' },
+  cook: { ...ROLE.cook, label: 'Cook', blurb: 'harvests, cooks and serves, and sees who is coming' },
+};
+
+const room = hostRoom({ game: 'garden', seats: Object.keys(SEATS), onSeats: render, onAction, onStatus });
+const KEY = `coop-garden-${room.room}`;
+// the save: everything needed to pick up at the start of the day we stopped on
+let S = load(KEY) || { season: 0, unlocked: 0, game: null, turn: newTurn(), log: [], lastDay: null, lobby: true };
+let busy = false, reveal = null; // reveal: {plans, events, i} while a day plays out
+const persist = () => save(KEY, S);
+const def = () => SEASONS[S.season];
+
+$('room').textContent = 'Room ' + room.room;
+await findLan();
+
+function onStatus(st) {
+  $('net').innerHTML = `<span class="dot${st === 'open' ? ' on' : ''}"></span><span>${st === 'open' ? (room.net === 'local' ? 'local tabs' : 'online') : st}</span>`;
+}
+
+function start(i) {
+  S.season = i; S.game = newSeason(SEASONS[i]); S.turn = newTurn(); S.lobby = false; S.lastDay = null;
+  S.log = [{ kind: 'info', text: `${SEASONS[i].name}: ${SEASONS[i].intro}` }];
+  persist(); render();
+}
+
+const bothSeated = () => Object.keys(SEATS).every(s => room.seat(s));
+
+function onAction(seat, a) {
+  if (!a || typeof a !== 'object' || busy) return;
+  const g = S.game;
+  if (a.a === 'next' && g?.status === 'won') return start(Math.min(S.season + 1, SEASONS.length - 1));
+  if (a.a === 'retry' && g?.status === 'lost') return start(S.season);
+  if (a.a === 'start' && S.lobby && bothSeated()) { if (g) { S.lobby = false; persist(); return render(); } return start(0); }
+  if (!g || g.status !== 'play' || S.lobby || !seat) return;
+  if (a.a === 'plan') {
+    const r = submit(PHASES, S.turn, seat, cleanPlan(seat, a.plan, def()));
+    if (r.done) return playDay(r.done.moves); // saved once the day is over, so a reload mid-reveal replays the plan step
+    S.turn = r.turn; persist(); render();
+  } else if (a.a === 'unplan') {
+    S.turn = withdraw(PHASES, S.turn, seat); persist(); render();
+  }
+}
+
+const wait = ms => new Promise(r => setTimeout(r, ms));
+async function playDay(plans) {
+  busy = true;
+  const day = S.game.day, { state, events } = resolveDay(S.game, def(), plans);
+  reveal = { plans, events, i: -1 };
+  banner('Plans revealed!', 'info'); render();
+  await wait(1600);
+  for (let i = 0; i < events.length; i++) {
+    reveal.i = i; banner(events[i].text, events[i].kind); render();
+    await wait(1100);
+  }
+  banner(null);
+  S.game = state; S.turn = newTurn(); S.lastDay = { day, events };
+  S.log = [{ kind: 'info', text: `— Day ${day} —` }, ...events.filter(e => e.kind !== 'info' || e.who === 'sky'), ...S.log].slice(0, 40);
+  if (state.status === 'won') S.unlocked = Math.max(S.unlocked, Math.min(S.season + 1, SEASONS.length - 1));
+  reveal = null; busy = false; persist(); render();
+}
+
+function banner(text, kind) {
+  $('banner').classList.toggle('hidden', !text);
+  if (text) { $('banner').textContent = text; $('banner').className = 'banner ' + (kind || ''); }
+}
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function cardFor(at) {
+  const g = S.game, opts = { tokens: [] };
+  if (reveal) {
+    for (const who of ['grower', 'cook']) for (const t of reveal.plans[who] || []) if (t.at === at) {
+      const o = optionsFor(who, at, g, def()).find(o => o.verb === t.verb && (o.opt || null) === (t.opt || null));
+      opts.tokens.push({ who, label: `${SEATS[who].tok} ${o ? o.label : t.verb}` });
+    }
+    const e = reveal.events[reveal.i];
+    if (e && (e.at === at || (e.at === null && at.startsWith('b')))) { opts.cls = 'hot'; if (e.at === at) opts.bubble = e; }
+  }
+  return card(at, g, def(), opts);
+}
+
+function render() {
+  const g = S.game, d = def();
+  $('lobby').classList.toggle('hidden', !S.lobby);
+  if (S.lobby) renderLobby($('lobby'), {
+    room: room.room, title: 'Two-Keeper Garden',
+    seats: Object.entries(SEATS).map(([k, v]) => ({ ...v, taken: !!room.seat(k), name: room.seat(k)?.name, connected: room.connected(k) })),
+    startable: bothSeated(), startLabel: g && g.status === 'play' ? `Resume day ${g.day}` : 'Start',
+  });
+
+  if (g) {
+    $('season').textContent = `Season ${S.season + 1} of ${SEASONS.length}: ${d.name}`;
+    $('day').textContent = `${g.day} / ${d.days}`;
+    $('stars').textContent = `⭐ ${g.stars} / ${d.target}`;
+    $('goal').style.width = Math.min(100, 100 * g.stars / d.target) + '%';
+    $('beds').style.setProperty('--n', d.beds.length);
+    const beds = stations(d).filter(a => a.startsWith('b')).map(cardFor).join('');
+    const kitchen = card('basket', g, d) + cardFor('stove') + cardFor('counter');
+    if ($('beds').innerHTML !== beds) $('beds').innerHTML = beds;
+    if ($('kitchen').innerHTML !== kitchen) $('kitchen').innerHTML = kitchen;
+    const lk = lockedIn(PHASES, S.turn);
+    $('phase').innerHTML = g.status !== 'play' ? (g.status === 'won' ? '🌻 Season complete!' : '🍂 The season is over')
+      : busy ? `Day ${g.day} is playing out…<small>Watch what happens.</small>`
+      : `Day ${g.day}: plan together, then place your 3 tokens on your phones.<small>Plans stay secret until you are both ready.</small>
+         <div class="who">${Object.keys(SEATS).map(s => `<span class="chip"><span class="dot${lk[s] ? ' on' : ''}"></span>${SEATS[s].icon} ${esc(room.seat(s)?.name || SEATS[s].label)}: ${lk[s] ? 'ready' : 'planning'}</span>`).join('')}</div>`;
+  }
+  $('log').innerHTML = (S.log || []).slice(0, 12).map(l => `<div class="${l.kind}">${esc(l.text)}</div>`).join('');
+
+  const over = g && !busy && !S.lobby && g.status !== 'play';
+  if (!$('end').dataset.picker || over) { $('end').classList.toggle('hidden', !over); delete $('end').dataset.picker; }
+  if (over) {
+    const last = S.season >= SEASONS.length - 1;
+    $('end').innerHTML = `<div class="endcard">
+      <h2>${g.status === 'won' ? '🌻 What a season!' : '🍂 Season over'}</h2>
+      <p>${esc(g.why)} Served ${g.served}, missed ${g.missed}.</p>
+      <p><b>Good stopping point.</b> Progress is saved; close the tab whenever you like.</p>
+      <div class="row2">
+        ${g.status === 'won' && !last ? '<button class="btn go" data-act="next">Next season</button>' : ''}
+        ${g.status === 'won' && last ? '<p>That was every season. Fill in the playtest rubric together!</p>' : ''}
+        <button class="btn" data-act="retry">${g.status === 'won' ? 'Play this season again' : 'Try again'}</button>
+      </div></div>`;
+  }
+  sendViews();
+}
+
+// Each phone gets the shared table plus its own secret: the grower the forecast, the cook tomorrow's orders.
+function sendViews() {
+  const g = S.game, d = def();
+  const common = {
+    lobby: S.lobby, started: !!g, busy, season: S.season, canStart: S.lobby && bothSeated(),
+    state: g, phase: g ? phaseOf(PHASES, S.turn)?.name : null, locked: g ? lockedIn(PHASES, S.turn) : {}, lastDay: S.lastDay,
+  };
+  for (const seat of Object.keys(SEATS)) room.send(seat, {
+    ...common, seat, myPlan: S.turn.got[seat] || null,
+    forecast: seat === 'grower' && g ? forecast(g, d) : null,
+    upcoming: seat === 'cook' && g ? upcoming(g, d) : null,
+  });
+}
+
+document.body.addEventListener('click', e => {
+  const act = e.target.closest('[data-act]')?.dataset.act;
+  if (act === 'start') onAction(null, { a: 'start' });
+  if (act === 'swap') { room.swap('grower', 'cook'); render(); }
+  if (act === 'next') onAction(null, { a: 'next' });
+  if (act === 'retry') onAction(null, { a: 'retry' });
+  if (act?.startsWith('season:')) { $('end').classList.add('hidden'); start(+act.slice(7)); }
+});
+$('swap').onclick = () => { room.swap('grower', 'cook'); render(); };
+$('restart').onclick = () => { if (!busy) start(S.season); };
+$('seats').onclick = () => { S.lobby = true; persist(); render(); };
+$('seasons').onclick = () => {
+  $('end').dataset.picker = '1'; $('end').classList.remove('hidden');
+  $('end').innerHTML = `<div class="endcard"><h2>Choose a season</h2><div class="row2">${SEASONS.map((s, i) =>
+    `<button class="btn${i === S.season ? ' on' : ''}" data-act="season:${i}" ${i > S.unlocked ? 'disabled' : ''}>${i + 1}. ${esc(s.name)}</button>`).join('')}</div>
+    <div class="row2"><button class="btn sm" onclick="this.closest('.overlay').classList.add('hidden')">Close</button></div></div>`;
+};
+render();
+</script>
+</body>
+</html>

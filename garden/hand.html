@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#f3ead8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Garden · Hand</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="garden.css">
+<style>
+  body { user-select: none; -webkit-user-select: none; }
+  #app { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; min-height: 100%; }
+  #app.planning { height: 100dvh; min-height: 0; }
+  .scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin: 0 -4px; padding: 0 4px 6px; }
+  .dock { display: flex; flex-direction: column; gap: 8px; }
+  .top { display: flex; align-items: center; gap: 10px; font-size: 17px; }
+  .top .role { font-weight: 800; font-size: 21px; white-space: nowrap; }
+  .top .sp { flex: 1; }
+  .top .stats { white-space: nowrap; color: var(--ink-2); font-weight: 700; }
+  .msg { padding: 12px 14px; border-radius: var(--radius); background: var(--panel); border: 2px solid var(--line); font-size: 18px; line-height: 1.35; }
+  .msg.you { border-color: var(--accent); }
+  .msg small { display: block; color: var(--ink-2); font-size: 15px; margin-top: 4px; }
+  .secret { padding: 10px 12px; border-radius: var(--radius); background: #fff; border: 2px dashed var(--accent); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 16px; }
+  .secret .lab { font-weight: 800; color: var(--accent); width: 100%; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
+  .wx { display: flex; flex-direction: column; align-items: center; font-size: 13px; color: var(--ink-2); min-width: 54px; }
+  .wx b { font-size: 30px; line-height: 1.1; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid .card { min-height: 108px; padding: 10px; }
+  .grid .card .big { font-size: 36px; }
+  .grid .card.wide { grid-column: span 2; }
+  .grid .card .tok { min-height: 44px; font-size: 16px; touch-action: none; cursor: grab; }
+  .tray { display: flex; gap: 10px; justify-content: center; padding: 8px; border-radius: var(--radius); background: var(--bg-2); border: 2px dashed var(--line); min-height: 84px; align-items: center; }
+  .tray .lab { color: var(--ink-2); font-size: 14px; }
+  .handtok { width: 68px; height: 68px; border-radius: 50%; display: grid; place-items: center; font-size: 34px; color: #fff; touch-action: none; cursor: grab; box-shadow: 0 3px 0 rgba(0,0,0,.18); }
+  .handtok.grower { background: var(--grower); }
+  .handtok.cook { background: var(--cook); }
+  .handtok.sel, .tok.sel { outline: 4px solid var(--accent); outline-offset: 3px; }
+  .ghost { position: fixed; z-index: 50; pointer-events: none; transform: translate(-50%, -50%) scale(1.1); opacity: .92; }
+  .center { margin: auto 0; text-align: center; display: flex; flex-direction: column; gap: 14px; }
+  .center h1 { margin: 0; font-size: 34px; }
+  input { font: inherit; font-size: 28px; padding: 14px; border-radius: var(--radius); border: 2px solid var(--line); background: var(--bg-2); color: var(--ink); text-align: center; width: 100%; }
+  input.code { letter-spacing: .25em; text-transform: uppercase; font-weight: 800; }
+  .label { color: var(--ink-2); font-size: 15px; }
+  .btn.big { min-height: 68px; font-size: 22px; }
+  .recap { font-size: 15px; color: var(--ink-2); line-height: 1.5; }
+  .recap .bad { color: var(--bad); }
+  .recap .good { color: var(--good); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+import { joinRoom, param, load, save } from '../shared/net.js';
+import { optionsFor, stations, TOKENS, WEATHER, DISHES } from './game.js';
+import { SEASONS } from './seasons.js';
+import { card, ticket, ROLE } from './draw.js';
+
+const $app = document.getElementById('app');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+let status = 'connecting', seat = null, V = null, link = null;
+// this phone's plan before it is sent: [{at, verb, opt, label}], reset each day
+let plan = [], planFor = null, sel = null; // sel: 'tray' or the index of a placed token (tap-to-place fallback)
+let drag = null, pending = false;           // while dragging, incoming views wait
+
+const room = (param('room') || '').toUpperCase();
+if (!room) joinForm(); else connect(room);
+
+function joinForm() {
+  $app.innerHTML = `<div class="center">
+    <h1>🌻 Garden</h1>
+    <div class="label">Room code on the TV</div>
+    <input class="code" id="code" maxlength="5" autocomplete="off" autocapitalize="characters" placeholder="ABCDE">
+    <div class="label">Your name (optional)</div>
+    <input id="name" maxlength="16" value="${esc(load('coop-name', ''))}">
+    <button class="btn go big" id="go">Join</button></div>`;
+  document.getElementById('go').onclick = () => {
+    const code = document.getElementById('code').value.trim().toUpperCase();
+    if (code.length !== 5) return document.getElementById('code').focus();
+    save('coop-name', document.getElementById('name').value.trim());
+    const u = new URL(location.href); u.searchParams.set('room', code); location.href = u.href;
+  };
+}
+
+function connect(code) {
+  link = joinRoom({
+    room: code, name: load('coop-name', ''), want: param('want'),
+    onSeat: s => { seat = s; render(); },
+    onMessage: v => { V = v; render(); },
+    onStatus: s => { status = s; render(); },
+  });
+  render();
+}
+const act = body => link.act(body);
+const def = () => SEASONS[V.season];
+const locked = () => !!V.myPlan;
+
+function render() {
+  if (drag) { pending = true; return; }
+  if (!seat || !V || V.seat !== seat) {
+    $app.innerHTML = `<div class="center"><h1>🌻</h1><div class="msg">${
+      status === 'full' ? 'Both seats are taken in this room.' :
+      status === 'waiting' ? `Looking for the board of room ${esc(room)}…<small>Is the TV page open?</small>` :
+      seat ? 'Connected. Waiting for the board…' : `Joining room ${esc(room)}…`}</div></div>`;
+    return;
+  }
+  const R = ROLE[seat], g = V.state;
+  const net = status === 'open' ? '' : `<span class="chip"><span class="dot"></span>reconnecting</span>`;
+  const stats = g ? `<span class="stats">☀️ ${g.day}/${def().days} · ⭐ ${g.stars}/${def().target}</span>` : '';
+  let html = `<div class="top"><span class="role">${R.icon} ${R.name}</span>${net}<span class="sp"></span>${stats}</div>`;
+
+  if (V.lobby) {
+    html += `<div class="center"><div class="msg">You are the <b>${R.name}</b>.<small>${seat === 'grower'
+      ? 'You plant and water the beds, and only you can see the weather forecast.'
+      : 'You harvest, cook and serve, and only you can see who is coming tomorrow.'}</small></div>
+      ${V.canStart ? `<button class="btn go big" data-act="start">${V.started && g?.status === 'play' ? 'Resume' : 'Start'}</button>` : '<div class="label">Waiting for your partner to join…</div>'}</div>`;
+  } else if (g.status !== 'play') {
+    html += `<div class="center"><div class="msg you">${g.status === 'won' ? '🌻 Season complete!' : '🍂 ' + esc(g.why)}<small>Good stopping point: progress is saved.</small></div>
+      ${g.status === 'won' ? '<button class="btn go big" data-act="next">Next season</button>' : '<button class="btn go big" data-act="retry">Try again</button>'}</div>`;
+  } else {
+    const key = `${V.season}:${g.day}`;
+    if (planFor !== key) { planFor = key; plan = []; sel = null; }
+    if (V.myPlan) plan = V.myPlan.map(t => ({ ...t, label: labelOf(t) }));
+    html += planner();
+  }
+  const top = $app.querySelector('.scroll')?.scrollTop || 0;
+  $app.innerHTML = html;
+  $app.classList.toggle('planning', !!$app.querySelector('.dock'));
+  const sc = $app.querySelector('.scroll'); if (sc) sc.scrollTop = top;
+}
+
+const labelOf = t => (optionsFor(seat, t.at, V.state, def()).find(o => o.verb === t.verb && (o.opt || null) === (t.opt || null)) || { label: t.verb }).label;
+
+function planner() {
+  const g = V.state, d = def(), partner = seat === 'grower' ? 'cook' : 'grower';
+  let h = `<div class="scroll"><div class="msg${locked() || V.busy ? '' : ' you'}">${V.busy ? 'The day is playing out… watch the TV.'
+    : locked() ? `Locked in. ${V.locked[partner] ? 'Revealing…' : 'Waiting for your partner…'}<small>Changed your mind? You can still edit until you are both ready.</small>`
+    : `Drag your ${TOKENS} tokens onto the garden and café.<small>Tap a placed token to change or move it. ${V.locked[partner] ? '<b>Your partner is ready.</b>' : 'Your partner is planning too.'}</small>`}</div>`;
+  if (V.forecast) h += `<div class="secret"><span class="lab">🔒 Only you can see: the weather</span>${V.forecast.map((f, i) =>
+    `<span class="wx"><b>${WEATHER[f.w]}</b>${i === 0 ? 'today' : i === 1 ? 'tomorrow' : 'day ' + f.day}</span>`).join('')}<span class="label">Rain waters every bed.</span></div>`;
+  if (V.upcoming) h += `<div class="secret"><span class="lab">🔒 Only you can see: who is coming</span>${V.upcoming.length
+    ? V.upcoming.map(o => `<span>Day ${o.day}:</span>${ticket({ ...o, due: o.day + o.within - 1 }, o.day)}`).join('') : '<span class="label">Nobody new in the next two days.</span>'}</div>`;
+
+  const cards = stations(d).map(at => {
+    const usable = optionsFor(seat, at, g, d).length > 0;
+    const toks = plan.map((t, i) => [t, i]).filter(([t]) => t.at === at).map(([t, i]) => ({ who: seat, label: t.label, attrs: `data-tok="${i}"`, cls: sel === i ? 'sel' : '' }));
+    return card(at, g, d, { tokens: toks, cls: (usable ? '' : 'no') + (sel !== null && usable && !locked() ? ' drop' : '') + (at === 'counter' ? ' wide' : '') });
+  });
+  h += `<div class="grid">${cards.slice(0, -2).join('')}${card('basket', g, d)}${cards.slice(-2).join('')}</div>`;
+
+  if (typeof sel === 'number' && plan[sel]) h += `<div class="msg you">Selected: <b>${esc(plan[sel].label)}</b><small>Tap another spot to move it.</small>
+    <div style="display:flex;gap:10px;margin-top:10px"><button class="btn" style="flex:1" data-act="cycle">⟳ Change action</button><button class="btn" style="flex:1" data-act="takeback">↩ Take back</button></div></div>`;
+  if (V.lastDay?.events.length) h += `<div class="recap"><b>Yesterday (day ${V.lastDay.day})</b>${V.lastDay.events.map(e => `<div class="${e.kind}">${esc(e.text)}</div>`).join('')}</div>`;
+  h += '</div><div class="dock">';
+  const left = TOKENS - plan.length;
+  h += `<div class="tray" data-tray="1">${left ? Array.from({ length: left }, () => `<div class="handtok ${seat}${sel === 'tray' ? ' sel' : ''}" data-hand="1">${ROLE[seat].tok}</div>`).join('')
+    : '<span class="lab">All tokens placed. Drag one back here to take it off.</span>'}</div>`;
+  h += locked()
+    ? `<button class="btn big" data-act="unplan" ${V.busy ? 'disabled' : ''}>✏️ Change my plan</button>`
+    : `<button class="btn go big" data-act="ready" ${V.busy ? 'disabled' : ''}>✓ Ready${plan.length < TOKENS ? ` (${plan.length}/${TOKENS} placed)` : ''}</button>`;
+  return h + '</div>';
+}
+
+// --- placing tokens -------------------------------------------------------------------------------------------
+function place(at, from) { // from: 'tray' or a placed index
+  const opts = optionsFor(seat, at, V.state, def());
+  if (!opts.length || locked()) return false;
+  const o = opts[0], t = { at, verb: o.verb, ...(o.opt ? { opt: o.opt } : {}), label: o.label };
+  if (from === 'tray') { if (plan.length >= TOKENS) return false; plan.push(t); }
+  else if (plan[from].at !== at) plan[from] = t;
+  if (navigator.vibrate) navigator.vibrate(12);
+  return true;
+}
+function cycle(i) { // next option for a placed token
+  const t = plan[i], opts = optionsFor(seat, t.at, V.state, def());
+  const k = opts.findIndex(o => o.verb === t.verb && (o.opt || null) === (t.opt || null));
+  const o = opts[(k + 1) % opts.length];
+  plan[i] = { at: t.at, verb: o.verb, ...(o.opt ? { opt: o.opt } : {}), label: o.label };
+}
+const unplace = i => plan.splice(i, 1);
+
+$app.addEventListener('pointerdown', e => {
+  if (!V || V.lobby || V.busy || locked()) return;
+  const el = e.target.closest('[data-hand], [data-tok]');
+  if (!el) return;
+  e.preventDefault();
+  drag = { el, from: el.dataset.hand ? 'tray' : +el.dataset.tok, x: e.clientX, y: e.clientY, moved: false, ghost: null, over: null };
+});
+addEventListener('pointermove', e => {
+  if (!drag) return;
+  if (!drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 10) return;
+  if (!drag.moved) {
+    drag.moved = true;
+    drag.ghost = drag.el.cloneNode(true); drag.ghost.classList.add('ghost'); document.body.appendChild(drag.ghost);
+    drag.el.style.opacity = '.3';
+  }
+  drag.ghost.style.left = e.clientX + 'px'; drag.ghost.style.top = e.clientY + 'px';
+  const sc = $app.querySelector('.scroll'), r = sc?.getBoundingClientRect();
+  if (r && e.clientY < r.top + 48) sc.scrollTop -= 14;
+  if (r && e.clientY > r.bottom - 48 && e.clientY < r.bottom + 4) sc.scrollTop += 14;
+  const over = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-at]');
+  if (drag.over !== over) { drag.over?.classList.remove('hot'); drag.over = over; if (over && optionsFor(seat, over.dataset.at, V.state, def()).length) over.classList.add('hot'); }
+});
+addEventListener('pointerup', e => {
+  if (!drag) return;
+  const d = drag; drag = null;
+  d.ghost?.remove();
+  if (!d.moved) tap(d.from);
+  else {
+    const target = document.elementFromPoint(e.clientX, e.clientY);
+    const at = target?.closest('[data-at]')?.dataset.at;
+    if (at) place(at, d.from);
+    else if (target?.closest('[data-tray]') && d.from !== 'tray') unplace(d.from);
+    sel = null;
+  }
+  quiet = true; setTimeout(() => { quiet = false; }, 0); pending = false; render();
+});
+addEventListener('pointercancel', () => { if (drag) { drag.ghost?.remove(); drag = null; pending = false; render(); } });
+
+let quiet = false; // the click the browser fires right after a handled tap or drop is ignored
+function tap(from) { sel = sel === from ? null : from; }
+
+$app.addEventListener('click', e => {
+  if (quiet) return;
+  const a = e.target.closest('[data-act]')?.dataset.act;
+  if (a && !e.target.closest('[disabled]')) {
+    if (a === 'start' || a === 'next' || a === 'retry') act({ a });
+    else if (a === 'cycle' && typeof sel === 'number') cycle(sel);
+    else if (a === 'takeback' && typeof sel === 'number') { unplace(sel); sel = null; }
+    else if (a === 'ready') { act({ a: 'plan', plan: plan.map(({ label, ...t }) => t) }); sel = null; }
+    else if (a === 'unplan') act({ a: 'unplan' });
+    return render();
+  }
+  // tap-to-place fallback: a selected token goes to the tapped station; a tap on the tray takes it off
+  if (sel === null || locked() || V?.busy || e.target.closest('[data-hand], [data-tok]')) return;
+  const at = e.target.closest('[data-at]')?.dataset.at;
+  if (at && place(at, sel)) { sel = null; render(); }
+  else if (e.target.closest('[data-tray]') && sel !== 'tray') { unplace(sel); sel = null; render(); }
+});
+</script>
+</body>
+</html>

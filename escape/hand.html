@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b1424">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Escape Room · Hand</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="escape.css">
+<style>
+  body { height: auto; min-height: 100%; user-select: none; -webkit-user-select: none; }
+  #app { padding: 12px 16px calc(20px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 12px; min-height: 100vh; }
+  .top { display: flex; align-items: center; gap: 10px; font-size: 16px; }
+  .top .role { font-weight: 800; font-size: 22px; white-space: nowrap; }
+  .top .sp { flex: 1; }
+  .msg { padding: 14px 16px; border-radius: var(--radius); background: var(--panel); border: 2px solid var(--line); font-size: 18px; line-height: 1.35; }
+  .msg.you { border-color: var(--accent); }
+  .msg.good { border-color: var(--good); }
+  .msg.bad { border-color: var(--bad); }
+  .msg small { display: block; color: var(--ink-2); font-size: 15px; margin-top: 4px; }
+  .center { margin: auto 0; text-align: center; display: flex; flex-direction: column; gap: 14px; }
+  .center h1 { margin: 0; font-size: 34px; }
+  input { font: inherit; font-size: 28px; padding: 14px; border-radius: var(--radius); border: 2px solid var(--line); background: var(--bg-2); color: var(--ink); text-align: center; width: 100%; }
+  input.code { letter-spacing: .25em; text-transform: uppercase; font-weight: 800; }
+  .label { color: var(--ink-2); font-size: 15px; }
+  h2 { margin: 6px 0 0; font-size: 17px; color: var(--ink-2); font-weight: 600; }
+  .locklist { display: flex; flex-direction: column; gap: 10px; }
+  .lockbtn { display: flex; align-items: center; gap: 12px; text-align: left; width: 100%; }
+  .lockbtn .ico { font-size: 30px; }
+  .lockbtn .st { margin-left: auto; font-size: 15px; color: var(--ink-2); font-weight: 500; }
+  .lockbtn.open { border-color: var(--good); opacity: .6; }
+  .lockbtn.final { border-color: var(--accent); }
+  .slots { display: flex; gap: 8px; justify-content: center; }
+  .slots .s { width: 62px; height: 70px; border-radius: 12px; border: 2px dashed var(--line); background: var(--bg-2); display: grid; place-items: center; font-size: 30px; font-weight: 800; }
+  .slots .s.full { border-style: solid; }
+  .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .keys .btn { font-size: 30px; padding: 0; min-height: 72px; }
+  .keys.colors .btn { display: grid; place-items: center; min-height: 84px; }
+  .keys.pick { grid-template-columns: 1fr; }
+  .keys.pick .btn.on { background: var(--accent); color: var(--accent-ink); }
+  .keys.coord { grid-template-columns: repeat(5, 1fr); }
+  .keys.coord .btn { font-size: 26px; min-height: 64px; }
+  .keys.coord .btn.on { background: var(--accent); color: var(--accent-ink); }
+  .row { display: flex; gap: 10px; }
+  .row .btn { flex: 1; }
+  .big { min-height: 76px; font-size: 24px; }
+  .shake { animation: shake .45s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+import { joinRoom, param, load, save } from '../shared/net.js';
+import { cardHtml, token, esc, DIR_ICON } from './cards.js';
+
+const $app = document.getElementById('app');
+const ROLE = { sun: ['☀️', 'Sun'], moon: ['🌙', 'Moon'] };
+
+let status = 'connecting', seat = null, V = null, link = null;
+// local: which lock's keypad is open, what has been typed, and the last try this phone has reacted to
+let entering = null, value = [], seen = null, note = null, noteTimer = null;
+
+const room = (param('room') || '').toUpperCase();
+if (!room) joinForm(); else connect(room);
+
+function joinForm() {
+  $app.innerHTML = `<div class="center">
+    <h1>🔐 Escape Room</h1>
+    <div class="label">Room code on the TV</div>
+    <input class="code" id="code" maxlength="5" autocomplete="off" autocapitalize="characters" placeholder="ABCDE">
+    <div class="label">Your name (optional)</div>
+    <input id="name" maxlength="16" value="${esc(load('coop-name', ''))}">
+    <button class="btn go big" id="go">Join</button></div>`;
+  document.getElementById('go').onclick = () => {
+    const code = document.getElementById('code').value.trim().toUpperCase();
+    if (code.length !== 5) return document.getElementById('code').focus();
+    save('coop-name', document.getElementById('name').value.trim());
+    const u = new URL(location.href); u.searchParams.set('room', code); location.href = u.href;
+  };
+}
+
+function connect(code) {
+  link = joinRoom({
+    room: code, name: load('coop-name', ''), want: param('want'),
+    onSeat: s => { seat = s; render(); },
+    onMessage: v => { if (V && v.level !== V.level) { note = null; entering = null; value = []; } react(v); V = v; render(); },
+    onStatus: s => { status = s; render(); },
+  });
+  render();
+}
+
+// A try just landed: tell this phone how it went (its own try) or what the partner managed.
+function react(v) {
+  const l = v.last;
+  if (!l || seen === null) { seen = l ? l.n : 0; return; }
+  if (l.n <= seen) return;
+  seen = l.n;
+  const lock = v.locks.find(x => x.id === l.lock), title = lock ? lock.title.toLowerCase() : 'lock';
+  if (l.seat === v.seat) {
+    note = l.opened ? ['good', `🔓 The ${title} is open!`] : l.ok ? ['good', `✓ Your half is in. Now your partner enters theirs.`] : ['bad', `✗ Not quite. The ${title} stays shut.`];
+    if (l.ok) { entering = null; value = []; }
+  } else {
+    note = l.opened ? ['good', `🔓 Your partner opened the ${title}!`] : l.ok ? ['good', `Your partner’s half of the ${title} is in.`] : ['', `Your partner tried the ${title}. Still locked.`];
+    if (l.opened && entering === l.lock) { entering = null; value = []; }
+  }
+  clearTimeout(noteTimer); noteTimer = setTimeout(() => { note = null; render(); }, 3500);
+}
+
+function render() {
+  if (!seat || !V || V.seat !== seat) {
+    $app.innerHTML = `<div class="center"><h1>🔐</h1><div class="msg">${
+      status === 'full' ? 'Both seats are taken in this room.' :
+      status === 'waiting' ? `Looking for the board of room ${esc(room)}…<small>Is the TV page open?</small>` :
+      seat ? 'Connected. Waiting for the board…' : `Joining room ${esc(room)}…`}</div></div>`;
+    return;
+  }
+  const [icon, name] = ROLE[seat];
+  const net = status === 'open' ? '' : `<span class="chip"><span class="dot"></span>reconnecting</span>`;
+  let h = `<div class="top"><span class="role">${icon} ${name}</span>${net}<span class="sp"></span>${V.started ? `<span class="chip">Room ${V.level + 1}/${V.rooms}</span>` : ''}</div>`;
+
+  if (V.lobby) {
+    h += `<div class="center"><div class="msg">You are <b>${name}</b>.<small>You will see half of every clue. Your partner sees the other half. Talk!</small></div>
+      ${V.canStart ? `<button class="btn go big" data-act="start">${V.started ? 'Resume' : 'Start'}</button>` : '<div class="label">Waiting for your partner to join…</div>'}</div>`;
+  } else if (V.done) {
+    h += `<div class="center"><div class="msg good">🚪 ${esc(V.roomName)}: escaped!<small>Good stopping point: progress is saved.</small></div>
+      ${V.level < V.rooms - 1 ? '<button class="btn go big" data-act="next">Next room</button>' : '<div class="msg">🎉 That was the last room.</div>'}
+      <button class="btn" data-act="replay">Play this room again</button></div>`;
+  } else if (entering && V.locks.some(l => l.id === entering && !l.mine)) {
+    h += keypad(V.locks.find(l => l.id === entering));
+  } else {
+    entering = null;
+    h += note ? `<div class="msg ${note[0]}">${esc(note[1])}</div>`
+      : `<div class="msg you">${esc(V.roomName)}<small>Describe what you see. Neither of you can open anything alone.</small></div>`;
+    h += `<h2>Locks</h2><div class="locklist">${V.locks.map(l => {
+      const st = l.solved ? '🔓 open' : l.final ? (l.mine ? 'your half ✓' : 'partner’s half') : '🔒 locked';
+      return `<button class="btn lockbtn${l.solved ? ' open' : ''}${l.final && !l.solved ? ' final' : ''}" data-act="open:${l.id}" ${l.mine ? 'disabled' : ''}>
+        <span class="ico">${l.icon}</span>${esc(l.title)}<span class="st">${st}</span></button>`;
+    }).join('')}</div>`;
+    const cards = [...V.cards].sort((a, b) => a.solved - b.solved);
+    h += `<h2>What you see</h2>${cards.map(cardHtml).join('')}`;
+  }
+  $app.innerHTML = h;
+}
+
+function keypad(l) {
+  const i = l.input, kind = i.type, len = i.len || (kind === 'coord' ? 2 : 1);
+  let h = `<div class="row"><button class="btn sm" data-act="back" style="flex:none">← Back</button></div>`;
+  h += note && note[0] === 'bad' ? `<div class="msg bad shake">${esc(note[1])}</div>` : '';
+  h += `<div class="msg you"><span style="font-size:26px">${l.icon}</span> <b>${esc(l.title)}</b><small>${l.final ? 'Enter your <b>partner’s</b> half: ask them what their half-key shows.' : 'Either of you can enter the answer.'}</small></div>`;
+  if (kind !== 'pick') h += `<div class="slots">${Array.from({ length: len }, (_, k) => `<div class="s${value[k] ? ' full' : ''}">${value[k] ? token(kind, value[k]) : ''}</div>`).join('')}</div>`;
+  const full = value.length >= len;
+  const key = (v, label, cls = '') => `<button class="btn ${cls}" data-act="key:${v}" ${full && kind !== 'pick' && kind !== 'coord' ? 'disabled' : ''}>${label}</button>`;
+  if (kind === 'digits') h += `<div class="keys">${'123456789'.split('').map(d => key(d, d)).join('')}<span></span>${key('0', '0')}<span></span></div>`;
+  if (kind === 'dirs') h += `<div class="keys"><span></span>${key('N', DIR_ICON.N)}<span></span>${key('W', DIR_ICON.W)}<span></span>${key('E', DIR_ICON.E)}<span></span>${key('S', DIR_ICON.S)}<span></span></div>`;
+  if (kind === 'colors') h += `<div class="keys colors">${i.options.map(c => key(c, token('colors', c, true))).join('')}</div>`;
+  if (kind === 'pick') h += `<div class="keys pick">${i.options.map(o => `<button class="btn big${value[0] === o ? ' on' : ''}" data-act="key:${o}">${esc(i.label)} ${esc(o)}</button>`).join('')}</div>`;
+  if (kind === 'coord') h += `<div class="label">Column</div><div class="keys coord">${[...i.cols].map(c => `<button class="btn${value[0] === c ? ' on' : ''}" data-act="col:${c}">${c}</button>`).join('')}</div>
+    <div class="label">Row</div><div class="keys coord">${[...i.rows].map(r => `<button class="btn${value[1] === r ? ' on' : ''}" data-act="row:${r}">${r}</button>`).join('')}</div>`;
+  h += `<div class="row">${kind === 'pick' || kind === 'coord' ? '' : `<button class="btn" data-act="del" ${value.length ? '' : 'disabled'}>⌫</button>`}
+    <button class="btn go big" data-act="try" ${full && (kind !== 'coord' || (value[0] && value[1])) ? '' : 'disabled'}>Try it</button></div>`;
+  return h;
+}
+
+$app.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b || b.disabled) return;
+  if (navigator.vibrate) navigator.vibrate(10);
+  const [k, v] = b.dataset.act.split(':');
+  const lock = V && V.locks.find(l => l.id === entering), len = lock ? lock.input.len || 1 : 0;
+  if (k === 'start' || k === 'next' || k === 'replay') link.act({ a: k });
+  else if (k === 'open') { entering = v; value = []; note = null; }
+  else if (k === 'back') { entering = null; value = []; note = null; }
+  else if (k === 'key' && lock) { if (lock.input.type === 'pick') value = [v]; else if (value.length < len) value.push(v); }
+  else if (k === 'col') value = [v, value[1]];
+  else if (k === 'row') value = [value[0], v];
+  else if (k === 'del') value.pop();
+  else if (k === 'try' && lock) { link.act({ a: 'try', lock: lock.id, value }); value = []; }
+  render();
+});
+</script>
+</body>
+</html>

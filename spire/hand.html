@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b1424">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Co-op Spire · Hand</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="spire.css">
+<style>
+  body { user-select: none; -webkit-user-select: none; height: auto; min-height: 100%; }
+  #app { padding: 12px 16px calc(16px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 12px; min-height: 100vh; }
+  .top { display: flex; align-items: center; gap: 8px; font-size: 16px; flex-wrap: nowrap; }
+  .top .role { font-weight: 800; font-size: 20px; white-space: nowrap; }
+  .top .sp { flex: 1; }
+  .top .st { white-space: nowrap; font-weight: 700; }
+  .msg { padding: 12px 14px; border-radius: var(--radius); background: var(--panel); border: 2px solid var(--line); font-size: 17px; line-height: 1.35; }
+  .msg.you { border-color: var(--accent); }
+  .msg small { display: block; color: var(--ink-2); font-size: 14px; margin-top: 4px; }
+  .foe { display: flex; align-items: center; gap: 10px; }
+  .foe .ico { font-size: 34px; }
+  .foe .bar { flex: 1; height: 22px; }
+  .foe .bar b { font-size: 13px; }
+  .hand { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 8px; }
+  .hand .card { color: inherit; font: inherit; }
+  .center { margin: auto 0; text-align: center; display: flex; flex-direction: column; gap: 14px; }
+  .center h1 { margin: 0; font-size: 34px; }
+  input { font: inherit; font-size: 28px; padding: 14px; border-radius: var(--radius); border: 2px solid var(--line); background: var(--bg-2); color: var(--ink); text-align: center; width: 100%; }
+  input.code { letter-spacing: .25em; text-transform: uppercase; font-weight: 800; }
+  .hints { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .hints .btn { font-size: 28px; padding: 0; min-height: 64px; }
+  .big { min-height: 76px; font-size: 22px; width: 100%; }
+  .label { color: var(--ink-2); font-size: 14px; }
+  .evs { display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
+  .evs div { padding: 8px 10px; border-radius: 10px; background: var(--bg-2); }
+  .evs .cmb { border: 1px solid var(--accent); }
+  .opt { width: 100%; text-align: left; padding: 16px; min-height: 76px; }
+  .opt.sel { outline: 3px solid var(--accent); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+import { joinRoom, param, load, save } from '../shared/net.js';
+import { CARDS, RELICS, ENEMIES, HINTS } from './cards.js';
+import { REST } from './game.js';
+
+const $app = document.getElementById('app');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const ROLE = { warden: ['🛡️', 'Warden'], striker: ['⚔️', 'Striker'] };
+const INTENT_ICON = { atk: '🗡️', block: '🛡️', buff: '💪', charge: '🔔' };
+
+let status = 'connecting', seat = null, V = null, link = null;
+let sel = [], composingFor = null; // cards picked on this phone before locking in
+
+const room = (param('room') || '').toUpperCase();
+if (!room) joinForm(); else connect(room);
+
+function joinForm() {
+  $app.innerHTML = `<div class="center">
+    <h1>🃏 Co-op Spire</h1>
+    <div class="label">Room code on the TV</div>
+    <input class="code" id="code" maxlength="5" autocomplete="off" autocapitalize="characters" placeholder="ABCDE">
+    <div class="label">Your name (optional)</div>
+    <input id="name" maxlength="16" value="${esc(load('coop-name', ''))}">
+    <button class="btn go big" id="go">Join</button></div>`;
+  document.getElementById('go').onclick = () => {
+    const code = document.getElementById('code').value.trim().toUpperCase();
+    if (code.length !== 5) return document.getElementById('code').focus();
+    save('coop-name', document.getElementById('name').value.trim());
+    const u = new URL(location.href); u.searchParams.set('room', code); location.href = u.href;
+  };
+}
+
+function connect(code) {
+  link = joinRoom({
+    room: code, name: load('coop-name', ''), want: param('want'),
+    onSeat: s => { seat = s; render(); },
+    onMessage: v => { V = v; render(); },
+    onStatus: s => { status = s; render(); },
+  });
+  render();
+}
+const act = body => link.act(body);
+
+const cardBtn = (id, i, on, off) => {
+  const c = CARDS[id];
+  return `<button class="card ${c.seat}${on ? ' sel' : ''}" data-act="card:${i}" ${off ? 'disabled' : ''}><span class="cost">${c.cost}</span><span class="nm">${esc(c.name)}</span><span class="tx">${esc(c.text)}</span>${c.combo ? `<span class="cb">🤝 ${esc(c.combo.text)}</span>` : ''}${c.tags.length ? `<span class="tg">${c.tags.map(t => `<span>gives ${t}</span>`).join('')}</span>` : ''}</button>`;
+};
+
+function render() {
+  if (!seat || !V || V.seat !== seat) {
+    $app.innerHTML = `<div class="center"><h1>🃏</h1><div class="msg">${
+      status === 'full' ? 'Both seats are taken in this room.' :
+      status === 'waiting' ? `Looking for the board of room ${esc(room)}…<small>Is the TV page open?</small>` :
+      seat ? 'Connected. Waiting for the board…' : `Joining room ${esc(room)}…`}</div></div>`;
+    return;
+  }
+  const [icon, name] = ROLE[seat];
+  const net = status === 'open' ? '' : `<span class="chip"><span class="dot"></span>reconnecting</span>`;
+  const stats = V.started ? `<span class="st">❤️ ${V.hp}</span>${V.block ? `<span class="st">🛡️ ${V.block}</span>` : ''}${V.stage === 'fight' ? `<span class="st">⚡ ${V.energy}</span>` : ''}` : '';
+  let h = `<div class="top"><span class="role">${icon} ${name}</span>${net}<span class="sp"></span>${stats}</div>`;
+
+  if (V.lobby) {
+    h += `<div class="center"><div class="msg">You are the <b>${name}</b>.<small>${seat === 'warden'
+      ? 'Support and control: block, weaken, and mark the target so your partner hits harder.'
+      : 'Damage: your attacks get much stronger when your partner sets them up.'}</small></div>
+      ${V.canStart ? `<button class="btn go big" data-act="start">${V.started ? 'Resume' : 'Start a run'}</button>` : '<div class="label">Waiting for your partner to join…</div>'}</div>`;
+  } else if (V.busy) {
+    h += `<div class="msg you">🃏 Reveal! Watch the TV.</div>` + revealHtml();
+  } else if (V.stage === 'fight') {
+    h += fightHtml();
+  } else {
+    h += stageHtml();
+  }
+  $app.innerHTML = h;
+}
+
+function revealHtml() {
+  const evs = V.reveal?.events || [];
+  return `<div class="evs">${evs.map(e => `<div class="${e.combo ? 'cmb' : ''}">${e.seat === 'enemy' ? esc(e.text)
+    : `${ROLE[e.seat][0]} <b>${esc(CARDS[e.card].name)}</b>${e.combo ? ' 🤝' : ''}: ${esc(e.text)}`}</div>`).join('')}</div>`;
+}
+
+function fightHtml() {
+  const key = `${V.floor}:${V.turn}`;
+  if (composingFor !== key) { composingFor = key; sel = Array.isArray(V.mine) ? [...V.mine] : []; }
+  const lockedMe = V.mine !== null, partnerLocked = V.locked[seat === 'warden' ? 'striker' : 'warden'];
+  const spent = sel.reduce((n, i) => n + CARDS[V.hand[i]].cost, 0);
+  const e = V.enemy;
+  let h = `<div class="foe"><span class="ico">${e.icon}</span><div class="bar"><i style="width:${100 * e.hp / e.max}%"></i><b>${e.hp}/${e.max}${e.block ? ' 🛡️' + e.block : ''}${e.vuln ? ' 🎯' + e.vuln : ''}${e.weak ? ' 🌀' + e.weak : ''}</b></div>
+    <span class="intent" style="font-size:16px;padding:6px 10px">${e.intent.map(p => `${INTENT_ICON[p.k]} ${esc(p.text)}`).join(' ')}</span></div>`;
+  h += `<div class="msg${lockedMe ? '' : ' you'}">${lockedMe
+    ? `✅ Locked in.<small>${partnerLocked ? 'Revealing…' : `Waiting for ${esc(V.partner)}…`}</small>`
+    : `Pick cards in secret: ${spent}/${V.energy} energy.<small>${esc(V.partner)} ${partnerLocked ? 'has locked in.' : 'is choosing.'}${V.partnerHint ? ` Hint from them: <span style="font-size:22px">${V.partnerHint}</span>` : ''}${V.quiet ? ' Quiet mode: hints only.' : ''}</small>`}</div>`;
+  h += `<div class="hand">${V.hand.map((id, i) => cardBtn(id, i, sel.includes(i), lockedMe || (!sel.includes(i) && spent + CARDS[id].cost > V.energy))).join('')}</div>`;
+  if (!lockedMe) {
+    h += `<button class="btn go big" data-act="lock">${sel.length ? 'Lock in' : 'Lock in (play nothing)'}</button>`;
+    h += V.myHint ? `<div class="label" style="text-align:center">You hinted ${V.myHint}</div>`
+      : `<div class="label">Send one hint to ${esc(V.partner)}</div><div class="hints">${HINTS.map(x => `<button class="btn" data-act="hint:${x}">${x}</button>`).join('')}</div>`;
+  } else if (!partnerLocked) h += `<button class="btn big" data-act="unlock">Change my mind</button>`;
+  if (V.reveal && V.reveal.turn === V.turn - 1) h += `<div class="label">Last turn</div>` + revealHtml();
+  return h;
+}
+
+function stageHtml() {
+  const mine = V.mine, wait = !!V.locked[seat];
+  const waitMsg = `<div class="label" style="text-align:center">Chosen. Waiting for ${esc(V.partner)}…</div>`;
+  if (V.stage === 'reward') {
+    return `<div class="msg you">Victory! Add a card to your deck.</div>
+      <div class="hand">${V.rewards.map((id, i) => cardBtn(id, i, wait && mine === id, wait)).join('')}</div>
+      ${wait ? waitMsg : `<button class="btn big" data-act="skip">Skip</button>`}`;
+  }
+  if (V.stage === 'relic') {
+    return `<div class="msg you">Choose a relic together.<small>You both need to pick the same one.${V.mismatch ? ' <b>You picked different ones last time: talk it over.</b>' : ''}</small></div>
+      ${V.relicChoices.map(id => `<button class="btn opt${wait && mine === id ? ' sel' : ''}" data-act="relic:${id}" ${wait ? 'disabled' : ''}>${RELICS[id].icon} <b>${esc(RELICS[id].name)}</b><br><span class="label">${esc(RELICS[id].text)}</span></button>`).join('')}
+      ${wait ? waitMsg : ''}`;
+  }
+  if (V.stage === 'rest') {
+    return `<div class="msg you">🔥 A campfire. Agree on one.${V.mismatch ? '<small><b>You picked different ones: talk it over.</b></small>' : ''}</div>
+      ${Object.entries(REST).map(([k, t]) => `<button class="btn opt${wait && mine === k ? ' sel' : ''}" data-act="rest:${k}" ${wait ? 'disabled' : ''}>${esc(t)}</button>`).join('')}
+      ${wait ? waitMsg : ''}`;
+  }
+  if (V.stage === 'map') {
+    const n = V.nextFloor;
+    return `<div class="center"><div class="msg">Floor ${V.floor + 1} cleared.<small>Good stopping point: the run is saved.</small></div>
+      <div class="label">Next: ${n.enemy ? esc(ENEMIES[n.enemy].name) : 'a campfire'}</div>
+      <button class="btn go big" data-act="advance">Climb on</button></div>`;
+  }
+  return `<div class="center"><div class="msg you">${V.stage === 'won' ? '🔔 You reached the top!' : '💀 The climb ends.'}<small>${esc(V.why)}</small></div>
+    <button class="btn go big" data-act="newrun">New run</button></div>`;
+}
+
+$app.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b || b.disabled) return;
+  if (navigator.vibrate) navigator.vibrate(10);
+  const [k, v] = b.dataset.act.split(/:(.*)/);
+  if (k === 'card' && V.stage === 'fight') { const i = +v; sel = sel.includes(i) ? sel.filter(x => x !== i) : [...sel, i]; return render(); }
+  if (k === 'card' && V.stage === 'reward') act({ a: 'reward', card: V.rewards[+v] });
+  else if (k === 'skip') act({ a: 'reward', card: null });
+  else if (k === 'lock') act({ a: 'pick', idxs: sel });
+  else if (k === 'unlock') act({ a: 'unpick' });
+  else if (k === 'hint') act({ a: 'hint', emoji: v });
+  else if (k === 'relic') act({ a: 'relic', id: v });
+  else if (k === 'rest') act({ a: 'rest', choice: v });
+  else if (['start', 'advance', 'newrun'].includes(k)) act({ a: k });
+});
+addEventListener('resize', render);
+</script>
+</body>
+</html>

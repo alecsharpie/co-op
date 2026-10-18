@@ -1,0 +1,16 @@
+/* The bay, drawn by draw.js. --t is the tile size. */
+.board { position: relative; border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 2px var(--line); }
+.board .tiles { display: grid; grid-template-columns: repeat(auto-fill, var(--t)); width: 100%; height: 100%; }
+.t { width: var(--t); height: var(--t); display: grid; place-items: center; font-size: calc(var(--t) * .6); line-height: 1; transition: background .3s; }
+.t.water { background: var(--water); }
+.t.cur { background: var(--water-2); color: #bfe3ff; font-weight: 900; font-size: calc(var(--t) * .7); }
+.t.rock { background: var(--rock); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25); }
+.t.lamp { background: var(--rock); }
+.t.harbor { background: #2f6b4a; }
+.t.fog { background: var(--fog); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .025); }
+.t.lit { box-shadow: inset 0 0 0 999px rgba(255, 214, 120, .16), inset 0 0 0 1px rgba(255, 214, 120, .35); }
+.t.water.lit, .t.cur.lit { background: #2d6f9e; }
+.t.l.t.fog { background: var(--fog); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .025); }
+.tok { position: absolute; left: 0; top: 0; width: var(--t); height: var(--t); display: grid; place-items: center; font-size: calc(var(--t) * .72); transition: transform .45s ease-in-out; pointer-events: none; }
+.tok.ghost::after { content: ''; width: 30%; height: 30%; border-radius: 50%; border: 2px dashed #d8f1ff; opacity: .8; }
+.tok.boat { z-index: 2; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .5)); }

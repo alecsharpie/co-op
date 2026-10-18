@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Co-op · Dev</title>
+<link rel="stylesheet" href="shared/theme.css">
+<style>
+  body { display: grid; grid-template-columns: 1fr 390px 390px; gap: 8px; padding: 8px; height: 100vh; }
+  iframe { width: 100%; height: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+</style>
+</head>
+<body>
+<!-- Board + both hands over BroadcastChannel (?net=local): no relay, no phones. ?game=lighthouse picks the prototype. -->
+<script>
+  const game = new URLSearchParams(location.search).get('game') || 'lighthouse', room = 'DEVXX';
+  const frame = src => { const f = document.createElement('iframe'); f.src = src; document.body.appendChild(f); };
+  frame(`${game}/board.html?net=local&room=${room}`);
+  frame(`${game}/hand.html?net=local&room=${room}&cid=dev-keeper&want=keeper`);
+  frame(`${game}/hand.html?net=local&room=${room}&cid=dev-navigator&want=navigator`);
+</script>
+</body>
+</html>

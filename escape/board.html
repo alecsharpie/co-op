@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Escape Room · Board</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="escape.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+  body { display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
+  header { display: flex; align-items: center; gap: 14px; padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--bg-2); }
+  header h1 { margin: 0; font-size: 22px; }
+  header .bay { color: var(--ink-2); font-size: 18px; }
+  header .sp { flex: 1; }
+  main { display: grid; grid-template-columns: 1fr 340px; min-height: 0; }
+  #stage { padding: 24px 28px; overflow: auto; display: flex; flex-direction: column; gap: 20px; }
+  .scene { display: flex; gap: 24px; align-items: center; padding: 22px 26px; border-radius: 22px; background: radial-gradient(circle at 20% 20%, #2a3b63, var(--bg-2)); border: 1px solid var(--line); }
+  .scene .art { font-size: 54px; letter-spacing: 6px; white-space: nowrap; }
+  .scene h2 { margin: 0 0 6px; font-size: 32px; }
+  .scene p { margin: 0; color: var(--ink-2); font-size: 18px; line-height: 1.4; }
+  .locks { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .lock { padding: 18px; border-radius: 18px; background: var(--panel); border: 2px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+  .lock.open { border-color: var(--good); }
+  .lock.mystery { border-style: dashed; opacity: .6; }
+  .lock .top { display: flex; align-items: center; gap: 12px; }
+  .lock .ico { font-size: 48px; }
+  .lock h3 { margin: 0; font-size: 24px; }
+  .lock .state { font-size: 17px; color: var(--ink-2); }
+  .lock.open .state { color: var(--good); }
+  .halves { display: flex; gap: 8px; }
+  .halves .chip.ok { color: var(--good); border-color: var(--good); }
+  .hints { display: flex; flex-direction: column; gap: 6px; font-size: 16px; line-height: 1.35; }
+  .hints div { padding: 8px 10px; background: var(--bg-2); border-radius: 10px; border-left: 3px solid var(--accent); }
+  .lock .btn.sm { align-self: flex-start; }
+  .shake { animation: shake .45s; }
+  .pop { animation: pop .6s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+  @keyframes pop { 40% { transform: scale(1.05); box-shadow: 0 0 40px rgba(95, 211, 154, .5); } }
+  aside { border-left: 1px solid var(--line); padding: 18px; display: flex; flex-direction: column; gap: 14px; overflow: auto; background: var(--bg-2); }
+  .progress { display: flex; gap: 8px; }
+  .progress span { flex: 1; height: 10px; border-radius: 6px; background: var(--line); }
+  .progress span.on { background: var(--good); }
+  .log { display: flex; flex-direction: column; gap: 8px; font-size: 15px; color: var(--ink-2); line-height: 1.4; }
+  .log .ok { color: var(--good); }
+  .log .tk { font-size: 16px; min-width: 18px; }
+  .log .sw i { width: 16px; height: 16px; } .log .sw small { display: none; }
+  .settings { margin-top: auto; display: flex; flex-wrap: wrap; gap: 8px; }
+  .overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(5, 10, 20, .82); z-index: 10; padding: 24px; }
+  .card { max-width: 640px; text-align: center; padding: 36px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 24px; }
+  .card h2 { font-size: 40px; margin: 0 0 10px; }
+  .card p { font-size: 20px; color: var(--ink-2); }
+  .card .row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🔐 Split-Vision Escape</h1>
+  <span class="bay" id="bay"></span>
+  <span class="sp"></span>
+  <span class="chip" id="net"><span class="dot"></span><span>connecting</span></span>
+  <span class="chip" id="room"></span>
+</header>
+<main>
+  <div id="stage"></div>
+  <aside>
+    <div class="progress" id="progress"></div>
+    <div style="font-size:18px;font-weight:700">What happened</div>
+    <div class="log" id="log"></div>
+    <div class="settings">
+      <button class="btn sm" id="swap">Swap roles</button>
+      <button class="btn sm" id="restart">Restart room</button>
+      <button class="btn sm" id="rooms">Rooms</button>
+      <button class="btn sm" id="seats">Show join code</button>
+    </div>
+  </aside>
+</main>
+<div class="overlay hidden" id="lobby"></div>
+<div class="overlay hidden" id="card"></div>
+
+<script type="module">
+import { hostRoom, load, save } from '../shared/net.js';
+import { renderLobby, findLan } from '../shared/lobby.js';
+import { ROOMS } from './rooms.js';
+import { newRoom, tryLock, hint, viewFor, roomDone, visible, isSolved, finalReady } from './game.js';
+import { token, esc } from './cards.js';
+
+const $ = id => document.getElementById(id);
+const SEATS = {
+  sun: { label: 'Sun', icon: '☀️', blurb: 'sees the room by daylight: half the clues' },
+  moon: { label: 'Moon', icon: '🌙', blurb: 'sees the room by lamplight: the other half' },
+};
+
+const room = hostRoom({ game: 'escape', seats: Object.keys(SEATS), onSeats: render, onAction, onStatus });
+const KEY = `coop-escape-${room.room}`;
+// the save: which room, which locks are open, which hints are showing
+let S = load(KEY) || { level: 0, unlocked: 0, st: newRoom(), log: [], lobby: true, started: false, last: null, n: 0 };
+const persist = () => save(KEY, S);
+const R = () => ROOMS[S.level];
+let shown = S.n; // the last try the TV has animated
+
+$('room').textContent = 'Room ' + room.room;
+await findLan();
+
+function onStatus(st) {
+  $('net').innerHTML = `<span class="dot${st === 'open' ? ' on' : ''}"></span><span>${st === 'open' ? (room.net === 'local' ? 'local tabs' : 'online') : st}</span>`;
+}
+
+const nameOf = seat => `${SEATS[seat].icon} ${room.seat(seat)?.name || SEATS[seat].label}`;
+const bothSeated = () => Object.keys(SEATS).every(s => room.seat(s));
+
+function enter(level) {
+  S.level = level; S.st = newRoom(); S.lobby = false; S.started = true; S.last = null;
+  S.log = [`Room ${level + 1}: ${ROOMS[level].name}.`];
+  persist(); render();
+}
+
+function onAction(seat, a) {
+  if (!a || typeof a !== 'object') return;
+  if (a.a === 'start' && S.lobby && bothSeated()) { if (S.started) { S.lobby = false; persist(); return render(); } return enter(0); }
+  if (S.lobby) return;
+  const done = roomDone(R(), S.st);
+  if (a.a === 'next' && done) return enter(Math.min(S.level + 1, ROOMS.length - 1));
+  if (a.a === 'replay' && done) return enter(S.level);
+  if (a.a === 'hint' && !done) { S.st = hint(R(), S.st, a.lock); persist(); return render(); }
+  if (a.a === 'try' && seat && !done) {
+    const lock = R().locks.find(l => l.id === a.lock);
+    if (!lock) return;
+    const r = tryLock(R(), S.st, a.lock, seat, a.value);
+    if (r.st === S.st) return; // not a lock this seat can try right now
+    S.st = r.st; S.n++;
+    S.last = { n: S.n, seat, lock: lock.id, ok: r.ok, opened: r.opened };
+    const what = (a.value || []).map(t => token(lock.input.type, t)).join(' ');
+    S.log.unshift(r.opened ? `<span class="ok">${esc(nameOf(seat))} opened the ${esc(lock.title.toLowerCase())}! 🔓</span>`
+      : r.ok ? `<span class="ok">${esc(nameOf(seat))}’s half of the ${esc(lock.title.toLowerCase())} clicks into place.</span>`
+      : `${esc(nameOf(seat))} tried ${what} on the ${esc(lock.title.toLowerCase())}. Still locked.`);
+    if (roomDone(R(), S.st)) { S.unlocked = Math.max(S.unlocked, Math.min(S.level + 1, ROOMS.length - 1)); S.log.unshift('<span class="ok">The way out is open!</span>'); }
+    S.log = S.log.slice(0, 30);
+    persist(); render();
+  }
+}
+
+function lockCard(l) {
+  const st = S.st, open = isSolved(l, st), n = st.hints[l.id] || 0;
+  const anim = S.last && S.last.n > shown && S.last.lock === l.id ? (S.last.ok ? ' pop' : ' shake') : '';
+  const halves = l.final ? `<div class="halves">${Object.keys(SEATS).map(s =>
+    `<span class="chip${st.solved[l.id]?.[s] ? ' ok' : ''}">${SEATS[s].icon} ${st.solved[l.id]?.[s] ? 'half in ✓' : 'waiting'}</span>`).join('')}</div>` : '';
+  return `<div class="lock${open ? ' open' : ''}${anim}">
+    <div class="top"><span class="ico">${l.icon}</span><div><h3>${esc(l.title)}</h3>
+      <div class="state">${open ? '🔓 Open' : l.final ? '🔒 Needs a half-key from each of you' : '🔒 Locked'}</div></div></div>
+    ${halves}
+    ${n ? `<div class="hints">${l.hints.slice(0, n).map(h => `<div>💡 ${esc(h)}</div>`).join('')}</div>` : ''}
+    ${!open && n < l.hints.length ? `<button class="btn sm" data-act="hint:${l.id}">💡 ${n ? 'Another hint' : 'Hint'}</button>` : ''}
+  </div>`;
+}
+
+function render() {
+  const r = R(), st = S.st, done = roomDone(r, st);
+  $('bay').textContent = `Room ${S.level + 1} of ${ROOMS.length}: ${r.name}`;
+  $('progress').innerHTML = r.locks.map(l => `<span class="${isSolved(l, st) ? 'on' : ''}"></span>`).join('');
+  const hidden = r.locks.filter(l => l.final && !finalReady(r, st));
+  $('stage').innerHTML = `
+    <div class="scene"><div class="art">${r.scene}</div><div><h2>${esc(r.name)}</h2><p>${esc(r.intro)}</p></div></div>
+    <div class="locks">${visible(r, st).map(lockCard).join('')}${hidden.map(() =>
+      `<div class="lock mystery"><div class="top"><span class="ico">❔</span><div><h3>The way out</h3><div class="state">Open the other locks first</div></div></div></div>`).join('')}</div>`;
+  shown = S.n;
+  $('log').innerHTML = S.log.slice(0, 12).map(l => `<div>${l}</div>`).join('');
+
+  $('lobby').classList.toggle('hidden', !S.lobby);
+  if (S.lobby) renderLobby($('lobby'), {
+    room: room.room, title: 'Split-Vision Escape Room',
+    seats: Object.entries(SEATS).map(([k, v]) => ({ ...v, taken: !!room.seat(k), name: room.seat(k)?.name, connected: room.connected(k) })),
+    startable: bothSeated(), startLabel: S.started ? `Resume room ${S.level + 1}` : 'Start',
+  });
+
+  const over = done && !S.lobby;
+  if (over || !$('card').dataset.picker) $('card').classList.toggle('hidden', !over);
+  if (over) {
+    delete $('card').dataset.picker;
+    const last = S.level >= ROOMS.length - 1;
+    $('card').innerHTML = `<div class="card">
+      <h2>${last ? '🎉 You escaped every room' : '🚪 Room escaped'}</h2>
+      <p>${esc(r.name)}: ${((n) => n === 0 ? 'no hints needed!' : n === 1 ? '1 hint used.' : n + ' hints used.')(Object.values(st.hints).reduce((a, b) => a + b, 0))}</p>
+      <p><b>Good stopping point.</b> Progress is saved; close the tab whenever you like.</p>
+      ${last ? '<p>Now fill in the playtest rubric together!</p>' : ''}
+      <div class="row">${!last ? '<button class="btn go" data-act="next">Next room</button>' : ''}<button class="btn" data-act="replay">Play this room again</button></div></div>`;
+  }
+  sendViews();
+}
+
+function sendViews() {
+  const r = R(), done = roomDone(r, S.st);
+  for (const seat of Object.keys(SEATS)) room.send(seat, {
+    seat, lobby: S.lobby, started: S.started, canStart: S.lobby && bothSeated(),
+    level: S.level, rooms: ROOMS.length, roomName: r.name, intro: r.intro, done, last: S.last,
+    ...viewFor(r, S.st, seat),
+  });
+}
+
+document.body.addEventListener('click', e => {
+  const act = e.target.closest('[data-act]')?.dataset.act;
+  if (!act) return;
+  if (act === 'start') onAction(null, { a: 'start' });
+  else if (act === 'swap') { room.swap('sun', 'moon'); render(); }
+  else if (act === 'next' || act === 'replay') onAction(null, { a: act });
+  else if (act.startsWith('hint:')) onAction(null, { a: 'hint', lock: act.slice(5) });
+  else if (act.startsWith('room:')) { delete $('card').dataset.picker; enter(+act.slice(5)); }
+  else if (act === 'close') { delete $('card').dataset.picker; render(); }
+});
+$('swap').onclick = () => { room.swap('sun', 'moon'); render(); };
+$('restart').onclick = () => enter(S.level);
+$('seats').onclick = () => { S.lobby = true; persist(); render(); };
+$('rooms').onclick = () => {
+  $('card').dataset.picker = '1';
+  $('card').classList.remove('hidden');
+  $('card').innerHTML = `<div class="card"><h2>Choose a room</h2><div class="row">${ROOMS.map((x, i) =>
+    `<button class="btn${i === S.level ? ' on' : ''}" data-act="room:${i}" ${i > S.unlocked ? 'disabled' : ''}>${i + 1}. ${esc(x.name)}</button>`).join('')}</div>
+    <div class="row"><button class="btn sm" data-act="close">Cancel</button></div></div>`;
+};
+render();
+</script>
+</body>
+</html>

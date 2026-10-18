@@ -51,6 +51,28 @@
   .card h2 { font-size: 40px; margin: 0 0 10px; }
   .card p { font-size: 20px; color: var(--ink-2); }
   .card .row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+  .lock { border-left: 8px solid var(--lc); }
+  .lock .who { display: flex; gap: 8px; flex-wrap: wrap; }
+  .lock .who .chip { font-size: 13px; }
+  .hints div b { color: var(--accent); margin-right: 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
+  .hints div.give { border-left-color: var(--bad); }
+  .scene .tag { display: inline-block; margin-bottom: 6px; padding: 2px 10px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 13px; font-weight: 800; }
+  .journal { margin: 14px auto 0; max-width: 520px; padding: 18px 22px; background: #f6ead0; color: #3a2a10; border-radius: 6px; font-family: Georgia, 'Times New Roman', serif; font-size: 20px; line-height: 1.45; text-align: left; transform: rotate(-1deg); box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+  .celebrate { position: fixed; inset: 0; display: grid; place-items: center; z-index: 20; pointer-events: none; background: radial-gradient(circle, rgba(95, 211, 154, .25), transparent 60%); animation: fadeout 2.6s forwards; }
+  .celebrate > div { text-align: center; padding: 30px 46px; border-radius: 28px; background: var(--bg-2); border: 3px solid var(--good); animation: burst .6s; }
+  .celebrate .big { font-size: 96px; line-height: 1; }
+  .celebrate h2 { margin: 10px 0 0; font-size: 40px; }
+  .celebrate p { margin: 6px 0 0; color: var(--ink-2); font-size: 20px; }
+  .confetti { position: fixed; top: -40px; font-size: 32px; z-index: 21; pointer-events: none; animation: fall 2.4s linear forwards; }
+  @keyframes burst { 0% { transform: scale(.4); opacity: 0; } 70% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
+  @keyframes fadeout { 0%, 75% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes fall { to { transform: translateY(110vh) rotate(540deg); } }
+  .rooms { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 16px; text-align: left; }
+  .rooms button { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px; min-height: 0; height: auto; font-size: 17px; }
+  .rooms button .art { font-size: 26px; letter-spacing: 2px; }
+  .rooms button small { color: var(--ink-2); font-weight: 500; font-size: 14px; }
+  .rooms button.done small { color: var(--good); }
+  .card.wide { max-width: 860px; }
 </style>
 </head>
 <body>
@@ -68,6 +90,7 @@
     <div style="font-size:18px;font-weight:700">What happened</div>
     <div class="log" id="log"></div>
     <div class="settings">
+      <button class="btn sm" id="howto">How to play</button>
       <button class="btn sm" id="swap">Swap roles</button>
       <button class="btn sm" id="restart">Restart room</button>
       <button class="btn sm" id="rooms">Rooms</button>
@@ -81,8 +104,9 @@
 <script type="module">
 import { hostRoom, load, save } from '../shared/net.js';
 import { renderLobby, findLan } from '../shared/lobby.js';
-import { ROOMS } from './rooms.js';
-import { newRoom, tryLock, hint, viewFor, roomDone, visible, isSolved, finalReady } from './game.js';
+import { showHelp, helpOnce } from '../shared/help.js';
+import { ROOMS, STORY } from './rooms.js';
+import { newRoom, tryLock, hint, viewFor, roomDone, visible, isSolved, finalReady, lockColor, HINT_TIERS, hintsUsed } from './game.js';
 import { token, esc } from './cards.js';
 
 const $ = id => document.getElementById(id);
@@ -94,13 +118,24 @@ const SEATS = {
 const room = hostRoom({ game: 'escape', seats: Object.keys(SEATS), onSeats: render, onAction, onStatus });
 const KEY = `coop-escape-${room.room}`;
 // the save: which room, which locks are open, which hints are showing
-let S = load(KEY) || { level: 0, unlocked: 0, st: newRoom(), log: [], lobby: true, started: false, last: null, n: 0 };
+const fresh = () => ({ v: 2, level: 0, unlocked: 0, st: newRoom(), log: [], lobby: true, started: false, last: null, n: 0, results: {} });
+let S = load(KEY);
+if (!S || S.v !== 2) S = fresh(); // rooms were renumbered when the tutorial arrived
 const persist = () => save(KEY, S);
 const R = () => ROOMS[S.level];
 let shown = S.n; // the last try the TV has animated
 
 $('room').textContent = 'Room ' + room.room;
 await findLan();
+
+const HOWTO = {
+  icon: '🔐', title: 'How to play', intro: STORY.intro,
+  sections: [
+    { h: 'The idea', items: ['Each phone shows a <b>different half</b> of every clue. Nobody can open anything alone.', 'Describe what you see, out loud, in order. Your partner cross-references it with theirs.'] },
+    { h: 'Each room', items: ['Every lock has a colour: its clues on both phones wear the same colour.', 'Either of you can type an answer. A wrong try costs nothing and says how close you were.', 'The last lock appears when the others open: you each enter what your <b>partner’s</b> phone shows.'] },
+    { h: 'On the TV', items: ['💡 Hints come in three steps: a nudge, how to do it, then a give-away.', 'There is no timer. Every escaped room is a good place to stop.'] },
+  ],
+};
 
 function onStatus(st) {
   $('net').innerHTML = `<span class="dot${st === 'open' ? ' on' : ''}"></span><span>${st === 'open' ? (room.net === 'local' ? 'local tabs' : 'online') : st}</span>`;
@@ -113,6 +148,24 @@ function enter(level) {
   S.level = level; S.st = newRoom(); S.lobby = false; S.started = true; S.last = null;
   S.log = [`Room ${level + 1}: ${ROOMS[level].name}.`];
   persist(); render();
+  helpOnce('escape-board', HOWTO);
+}
+
+// The big moment on the TV when a lock opens. The escaped card waits until it has finished.
+let celebrateUntil = 0;
+function celebrate(lock, seat) {
+  celebrateUntil = Date.now() + 2600; setTimeout(render, 2650);
+  const c = document.createElement('div');
+  c.className = 'celebrate';
+  c.innerHTML = `<div><div class="big">${lock.icon}</div><h2>🔓 ${esc(lock.title)} open!</h2><p>${lock.final ? 'You opened it together.' : `${esc(nameOf(seat))} turned it.`}</p></div>`;
+  document.body.appendChild(c);
+  for (let i = 0; i < 18; i++) {
+    const f = document.createElement('div');
+    f.className = 'confetti'; f.textContent = ['✨', '🎉', '⭐', '🔑'][i % 4];
+    f.style.left = Math.random() * 100 + 'vw'; f.style.animationDelay = Math.random() * .6 + 's';
+    document.body.appendChild(f); setTimeout(() => f.remove(), 3200);
+  }
+  setTimeout(() => c.remove(), 2700);
 }
 
 function onAction(seat, a) {
@@ -129,12 +182,18 @@ function onAction(seat, a) {
     const r = tryLock(R(), S.st, a.lock, seat, a.value);
     if (r.st === S.st) return; // not a lock this seat can try right now
     S.st = r.st; S.n++;
-    S.last = { n: S.n, seat, lock: lock.id, ok: r.ok, opened: r.opened };
+    S.last = { n: S.n, seat, lock: lock.id, ok: r.ok, opened: r.opened, close: r.close };
+    if (r.opened) celebrate(lock, seat);
     const what = (a.value || []).map(t => token(lock.input.type, t)).join(' ');
     S.log.unshift(r.opened ? `<span class="ok">${esc(nameOf(seat))} opened the ${esc(lock.title.toLowerCase())}! 🔓</span>`
       : r.ok ? `<span class="ok">${esc(nameOf(seat))}’s half of the ${esc(lock.title.toLowerCase())} clicks into place.</span>`
-      : `${esc(nameOf(seat))} tried ${what} on the ${esc(lock.title.toLowerCase())}. Still locked.`);
-    if (roomDone(R(), S.st)) { S.unlocked = Math.max(S.unlocked, Math.min(S.level + 1, ROOMS.length - 1)); S.log.unshift('<span class="ok">The way out is open!</span>'); }
+      : `${esc(nameOf(seat))} tried ${what} on the ${esc(lock.title.toLowerCase())}.${r.close != null ? ` ${r.close} of ${lock.input.len} right.` : ''} Still locked.`);
+    if (roomDone(R(), S.st)) {
+      S.unlocked = Math.max(S.unlocked, Math.min(S.level + 1, ROOMS.length - 1));
+      const was = S.results[S.level], now = { hints: hintsUsed(S.st), tries: S.st.tries || 0 };
+      S.results[S.level] = !was || now.hints < was.hints ? now : was; // keep the best escape
+      S.log.unshift('<span class="ok">The way out is open!</span>');
+    }
     S.log = S.log.slice(0, 30);
     persist(); render();
   }
@@ -145,12 +204,14 @@ function lockCard(l) {
   const anim = S.last && S.last.n > shown && S.last.lock === l.id ? (S.last.ok ? ' pop' : ' shake') : '';
   const halves = l.final ? `<div class="halves">${Object.keys(SEATS).map(s =>
     `<span class="chip${st.solved[l.id]?.[s] ? ' ok' : ''}">${SEATS[s].icon} ${st.solved[l.id]?.[s] ? 'half in ✓' : 'waiting'}</span>`).join('')}</div>` : '';
-  return `<div class="lock${open ? ' open' : ''}${anim}">
+  const who = !open && !l.final ? `<div class="who">${Object.keys(SEATS).map(s => `<span class="chip">${SEATS[s].icon} ${l.cards[s].filter(c => c.type !== 'coach').map(c => esc(c.title)).join(', ')}</span>`).join('')}</div>` : '';
+  const next = HINT_TIERS[n];
+  return `<div class="lock${open ? ' open' : ''}${anim}" style="--lc:${lockColor(R(), l)}">
     <div class="top"><span class="ico">${l.icon}</span><div><h3>${esc(l.title)}</h3>
-      <div class="state">${open ? '🔓 Open' : l.final ? '🔒 Needs a half-key from each of you' : '🔒 Locked'}</div></div></div>
-    ${halves}
-    ${n ? `<div class="hints">${l.hints.slice(0, n).map(h => `<div>💡 ${esc(h)}</div>`).join('')}</div>` : ''}
-    ${!open && n < l.hints.length ? `<button class="btn sm" data-act="hint:${l.id}">💡 ${n ? 'Another hint' : 'Hint'}</button>` : ''}
+      <div class="state">${open ? '🔓 Open' : l.final ? '🔒 Each of you enters your partner’s half' : '🔒 Locked'}</div></div></div>
+    ${halves}${who}
+    ${n && !open ? `<div class="hints">${l.hints.slice(0, n).map((h, i) => `<div class="${i === l.hints.length - 1 ? 'give' : ''}"><b>${HINT_TIERS[i] || 'Hint'}</b>${esc(h)}</div>`).join('')}</div>` : ''}
+    ${!open && n < l.hints.length ? `<button class="btn sm" data-act="hint:${l.id}">💡 ${next ? `${next} (${n + 1}/${l.hints.length})` : 'Hint'}</button>` : ''}
   </div>`;
 }
 
@@ -160,30 +221,32 @@ function render() {
   $('progress').innerHTML = r.locks.map(l => `<span class="${isSolved(l, st) ? 'on' : ''}"></span>`).join('');
   const hidden = r.locks.filter(l => l.final && !finalReady(r, st));
   $('stage').innerHTML = `
-    <div class="scene"><div class="art">${r.scene}</div><div><h2>${esc(r.name)}</h2><p>${esc(r.intro)}</p></div></div>
+    <div class="scene"><div class="art">${r.scene}</div><div>${r.tutorial ? '<span class="tag">PRACTICE ROOM</span>' : r.finale ? '<span class="tag">FINALE</span>' : ''}<h2>${esc(r.name)}</h2><p>${esc(r.intro)}</p></div></div>
     <div class="locks">${visible(r, st).map(lockCard).join('')}${hidden.map(() =>
-      `<div class="lock mystery"><div class="top"><span class="ico">❔</span><div><h3>The way out</h3><div class="state">Open the other locks first</div></div></div></div>`).join('')}</div>`;
+      `<div class="lock mystery" style="--lc:var(--line)"><div class="top"><span class="ico">❔</span><div><h3>The way out</h3><div class="state">Appears when the other locks are open</div></div></div></div>`).join('')}</div>`;
   shown = S.n;
   $('log').innerHTML = S.log.slice(0, 12).map(l => `<div>${l}</div>`).join('');
 
   $('lobby').classList.toggle('hidden', !S.lobby);
   if (S.lobby) renderLobby($('lobby'), {
-    room: room.room, title: 'Split-Vision Escape Room',
+    room: room.room, title: STORY.title,
     seats: Object.entries(SEATS).map(([k, v]) => ({ ...v, taken: !!room.seat(k), name: room.seat(k)?.name, connected: room.connected(k) })),
     startable: bothSeated(), startLabel: S.started ? `Resume room ${S.level + 1}` : 'Start',
   });
 
-  const over = done && !S.lobby;
-  if (over || !$('card').dataset.picker) $('card').classList.toggle('hidden', !over);
-  if (over) {
-    delete $('card').dataset.picker;
+  const over = done && !S.lobby && Date.now() >= celebrateUntil;
+  const picking = !!$('card').dataset.picker; // the room picker stays up until a room is chosen or it is cancelled
+  if (!picking) $('card').classList.toggle('hidden', !over);
+  if (over && !picking) {
     const last = S.level >= ROOMS.length - 1;
+    const used = hintsUsed(st);
     $('card').innerHTML = `<div class="card">
-      <h2>${last ? '🎉 You escaped every room' : '🚪 Room escaped'}</h2>
-      <p>${esc(r.name)}: ${((n) => n === 0 ? 'no hints needed!' : n === 1 ? '1 hint used.' : n + ' hints used.')(Object.values(st.hints).reduce((a, b) => a + b, 0))}</p>
-      <p><b>Good stopping point.</b> Progress is saved; close the tab whenever you like.</p>
+      <h2>${last ? '💌 The trail is complete' : '🚪 Room escaped'}</h2>
+      <p>${esc(r.name)}: ${used === 0 ? 'no hints needed!' : used === 1 ? '1 hint used.' : used + ' hints used.'}</p>
+      <div class="journal">${esc(r.journal || '')}</div>
+      <p style="margin-top:22px"><b>Good stopping point.</b> Progress is saved; close the tab whenever you like.</p>
       ${last ? '<p>Now fill in the playtest rubric together!</p>' : ''}
-      <div class="row">${!last ? '<button class="btn go" data-act="next">Next room</button>' : ''}<button class="btn" data-act="replay">Play this room again</button></div></div>`;
+      <div class="row">${!last ? '<button class="btn go" data-act="next">Next room</button>' : ''}<button class="btn" data-act="replay">Play this room again</button><button class="btn" data-act="pick">All rooms</button></div></div>`;
   }
   sendViews();
 }
@@ -192,7 +255,7 @@ function sendViews() {
   const r = R(), done = roomDone(r, S.st);
   for (const seat of Object.keys(SEATS)) room.send(seat, {
     seat, lobby: S.lobby, started: S.started, canStart: S.lobby && bothSeated(),
-    level: S.level, rooms: ROOMS.length, roomName: r.name, intro: r.intro, done, last: S.last,
+    level: S.level, rooms: ROOMS.length, roomName: r.name, intro: r.intro, tutorial: !!r.tutorial, done, last: S.last,
     ...viewFor(r, S.st, seat),
   });
 }
@@ -206,17 +269,27 @@ document.body.addEventListener('click', e => {
   else if (act.startsWith('hint:')) onAction(null, { a: 'hint', lock: act.slice(5) });
   else if (act.startsWith('room:')) { delete $('card').dataset.picker; enter(+act.slice(5)); }
   else if (act === 'close') { delete $('card').dataset.picker; render(); }
+  else if (act === 'pick') pickRoom();
 });
 $('swap').onclick = () => { room.swap('sun', 'moon'); render(); };
 $('restart').onclick = () => enter(S.level);
 $('seats').onclick = () => { S.lobby = true; persist(); render(); };
-$('rooms').onclick = () => {
+$('howto').onclick = () => showHelp(HOWTO);
+// The first few emoji of a scene, cut between whole characters (some emoji are several code points).
+const firstEmoji = (s, n) => [...new Intl.Segmenter().segment(s)].slice(0, n).map(g => g.segment).join('');
+// Every room, with how you did: the best escape is kept.
+function pickRoom() {
   $('card').dataset.picker = '1';
   $('card').classList.remove('hidden');
-  $('card').innerHTML = `<div class="card"><h2>Choose a room</h2><div class="row">${ROOMS.map((x, i) =>
-    `<button class="btn${i === S.level ? ' on' : ''}" data-act="room:${i}" ${i > S.unlocked ? 'disabled' : ''}>${i + 1}. ${esc(x.name)}</button>`).join('')}</div>
+  $('card').innerHTML = `<div class="card wide"><h2>${esc(STORY.title)}</h2><p>${esc(STORY.intro)}</p><div class="rooms">${ROOMS.map((x, i) => {
+    const res = S.results[i], locked = i > S.unlocked;
+    return `<button class="btn${i === S.level ? ' on' : ''}${res ? ' done' : ''}" data-act="room:${i}" ${locked ? 'disabled' : ''}>
+      <span class="art">${locked ? '🔒' : firstEmoji(x.scene, 3)}</span><b>${i + 1}. ${esc(x.name)}</b>
+      <small>${res ? `✓ escaped · ${res.hints === 0 ? 'no hints' : res.hints + ' hint' + (res.hints > 1 ? 's' : '')}` : locked ? 'escape the room before it first' : x.tutorial ? 'practice' : 'not escaped yet'}</small></button>`;
+  }).join('')}</div>
     <div class="row"><button class="btn sm" data-act="close">Cancel</button></div></div>`;
-};
+}
+$('rooms').onclick = pickRoom;
 render();
 </script>
 </body>

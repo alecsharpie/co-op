@@ -22,10 +22,10 @@ export function showHelp({ icon = '', title, intro = '', sections = [], button =
 
 export function closeHelp() { if (box) { box.remove(); box = null; } }
 
+// One storage key per card, so two pages sharing storage (dev.html) cannot undo each other's write.
 export function helpOnce(key, card) {
-  const seen = load('coop-help-seen', {});
-  if (seen[key]) return false;
-  seen[key] = 1; save('coop-help-seen', seen);
+  if (load(`coop-help-seen:${key}`)) return false;
+  save(`coop-help-seen:${key}`, 1);
   showHelp(card);
   return true;
 }

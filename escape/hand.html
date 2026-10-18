@@ -45,6 +45,23 @@
   .row { display: flex; gap: 10px; }
   .row .btn { flex: 1; }
   .big { min-height: 76px; font-size: 24px; }
+  .lockgroup { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 18px; background: color-mix(in srgb, var(--lc) 9%, var(--bg)); border: 2px solid color-mix(in srgb, var(--lc) 55%, transparent); }
+  .lg-h { display: flex; align-items: center; gap: 10px; font-size: 21px; }
+  .lg-h .ico { font-size: 32px; }
+  .lg-h .st { margin-left: auto; font-size: 14px; color: var(--ink-2); white-space: nowrap; }
+  .lg-sub { color: var(--ink-2); font-size: 15px; margin-top: -4px; }
+  .lg-enter { width: 100%; background: var(--lc); border-color: var(--lc); color: #10172a; }
+  .lg-enter small { font-weight: 500; opacity: .8; }
+  .lockgroup.mystery { --lc: var(--line); border-style: dashed; color: var(--ink-2); font-size: 16px; }
+  .opened { display: flex; flex-wrap: wrap; gap: 8px; }
+  .opened .chip { color: var(--good); border-color: var(--good); }
+  details.yourclue summary { cursor: pointer; color: var(--ink-2); font-size: 16px; padding: 6px 0; }
+  .format { text-align: center; color: var(--ink-2); font-size: 15px; margin-top: -4px; }
+  .dial { position: relative; width: min(300px, 80vw); aspect-ratio: 1; margin: 6px auto; border-radius: 50%; background: radial-gradient(circle, #2a3654, var(--bg-2)); border: 2px solid var(--line); }
+  .dial .btn { position: absolute; width: 58px; min-height: 58px; height: 58px; padding: 0; border-radius: 50%; font-size: 22px; transform: translate(-50%, -50%); }
+  .dial .btn.on { background: var(--accent); color: var(--accent-ink); }
+  .dial .mid { position: absolute; inset: 0; display: grid; place-items: center; font-size: 46px; font-weight: 800; color: var(--accent); pointer-events: none; }
+  .tickhint { color: var(--ink-2); font-size: 13px; text-align: center; }
   .shake { animation: shake .45s; }
   @keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
 </style>
@@ -53,6 +70,7 @@
 <div id="app"></div>
 <script type="module">
 import { joinRoom, param, load, save } from '../shared/net.js';
+import { showHelp, helpOnce, roleCard, helpButtonHtml } from '../shared/help.js';
 import { cardHtml, token, esc, DIR_ICON } from './cards.js';
 
 const $app = document.getElementById('app');
@@ -61,6 +79,22 @@ const ROLE = { sun: ['☀️', 'Sun'], moon: ['🌙', 'Moon'] };
 let status = 'connecting', seat = null, V = null, link = null;
 // local: which lock's keypad is open, what has been typed, and the last try this phone has reacted to
 let entering = null, value = [], seen = null, note = null, noteTimer = null;
+// items this phone has ticked off on its clue cards, per room: `${cardKey}:${item}`
+let ticks = new Set(), ticksFor = null, helped = false; // helped: the role card has had its chance this page load
+const tickKey = () => `coop-escape-ticks-${room}-${V.level}`;
+
+const ROLE_CARD = seat => roleCard({
+  icon: ROLE[seat][0], role: ROLE[seat][1],
+  goal: 'Escape each room together. Your phone shows half of every clue; your partner’s phone shows the other half.',
+  can: [
+    'See your half of the clues. Each clue is coloured like the lock it opens.',
+    'Enter an answer on any lock: tap <b>Enter answer</b> under its clues.',
+    'Tap things on your cards to tick them off as you read them out.',
+    'On the last lock of a room, enter what is shown on your <b>partner’s</b> phone.',
+  ],
+  partner: ['See the other half of every clue.', 'Read out the half-key you need for the last lock.'],
+  tips: ['Describe, don’t guess: say exactly what you see, in order.', 'There is no timer. Take your time.', 'Stuck? Ask the TV for a hint: nudge first, give-away last.'],
+});
 
 const room = (param('room') || '').toUpperCase();
 if (!room) joinForm(); else connect(room);
@@ -99,10 +133,11 @@ function react(v) {
   seen = l.n;
   const lock = v.locks.find(x => x.id === l.lock), title = lock ? lock.title.toLowerCase() : 'lock';
   if (l.seat === v.seat) {
-    note = l.opened ? ['good', `🔓 The ${title} is open!`] : l.ok ? ['good', `✓ Your half is in. Now your partner enters theirs.`] : ['bad', `✗ Not quite. The ${title} stays shut.`];
+    note = l.opened ? ['good', `🔓 The ${title} is open!`] : l.ok ? ['good', `✓ Your half is in. Now your partner enters theirs.`]
+      : ['bad', `✗ Not quite.${l.close != null ? ` ${l.close} of ${lock?.input.len || 0} in the right place.` : ''} The ${title} stays shut.`];
     if (l.ok) { entering = null; value = []; }
   } else {
-    note = l.opened ? ['good', `🔓 Your partner opened the ${title}!`] : l.ok ? ['good', `Your partner’s half of the ${title} is in.`] : ['', `Your partner tried the ${title}. Still locked.`];
+    note = l.opened ? ['good', `🔓 Your partner opened the ${title}!`] : l.ok ? ['good', `Your partner’s half of the ${title} is in. Now yours.`] : ['', `Your partner tried the ${title}. Still locked.`];
     if (l.opened && entering === l.lock) { entering = null; value = []; }
   }
   clearTimeout(noteTimer); noteTimer = setTimeout(() => { note = null; render(); }, 3500);
@@ -117,14 +152,16 @@ function render() {
     return;
   }
   const [icon, name] = ROLE[seat];
+  if (ticksFor !== `${room}-${V.level}`) { ticksFor = `${room}-${V.level}`; ticks = new Set(load(tickKey(), [])); }
+  if (!V.lobby && !helped) { helped = true; helpOnce(`escape-${seat}`, ROLE_CARD(seat)); }
   const net = status === 'open' ? '' : `<span class="chip"><span class="dot"></span>reconnecting</span>`;
-  let h = `<div class="top"><span class="role">${icon} ${name}</span>${net}<span class="sp"></span>${V.started ? `<span class="chip">Room ${V.level + 1}/${V.rooms}</span>` : ''}</div>`;
+  let h = `<div class="top"><span class="role">${icon} ${name}</span>${net}<span class="sp"></span>${V.started ? `<span class="chip">Room ${V.level + 1}/${V.rooms}</span>` : ''}${helpButtonHtml()}</div>`;
 
   if (V.lobby) {
     h += `<div class="center"><div class="msg">You are <b>${name}</b>.<small>You will see half of every clue. Your partner sees the other half. Talk!</small></div>
       ${V.canStart ? `<button class="btn go big" data-act="start">${V.started ? 'Resume' : 'Start'}</button>` : '<div class="label">Waiting for your partner to join…</div>'}</div>`;
   } else if (V.done) {
-    h += `<div class="center"><div class="msg good">🚪 ${esc(V.roomName)}: escaped!<small>Good stopping point: progress is saved.</small></div>
+    h += `<div class="center"><div class="msg good">🚪 ${esc(V.roomName)}: escaped!<small>Look at the TV for the next page of Wren’s journal. Good stopping point: progress is saved.</small></div>
       ${V.level < V.rooms - 1 ? '<button class="btn go big" data-act="next">Next room</button>' : '<div class="msg">🎉 That was the last room.</div>'}
       <button class="btn" data-act="replay">Play this room again</button></div>`;
   } else if (entering && V.locks.some(l => l.id === entering && !l.mine)) {
@@ -132,24 +169,35 @@ function render() {
   } else {
     entering = null;
     h += note ? `<div class="msg ${note[0]}">${esc(note[1])}</div>`
-      : `<div class="msg you">${esc(V.roomName)}<small>Describe what you see. Neither of you can open anything alone.</small></div>`;
-    h += `<h2>Locks</h2><div class="locklist">${V.locks.map(l => {
-      const st = l.solved ? '🔓 open' : l.final ? (l.mine ? 'your half ✓' : 'partner’s half') : '🔒 locked';
-      return `<button class="btn lockbtn${l.solved ? ' open' : ''}${l.final && !l.solved ? ' final' : ''}" data-act="open:${l.id}" ${l.mine ? 'disabled' : ''}>
-        <span class="ico">${l.icon}</span>${esc(l.title)}<span class="st">${st}</span></button>`;
-    }).join('')}</div>`;
-    const cards = [...V.cards].sort((a, b) => a.solved - b.solved);
-    h += `<h2>What you see</h2>${cards.map(cardHtml).join('')}`;
+      : `<div class="msg you">${esc(V.roomName)}<small>${V.tutorial ? 'Practice room: follow the steps on your first card.' : 'Read your clues out loud. Each lock needs both of your phones.'}</small></div>`;
+    const open = V.locks.filter(l => !l.solved), done = V.locks.filter(l => l.solved);
+    h += open.map(l => {
+      const cards = V.cards.filter(c => c.lock === l.id);
+      const st = l.final ? (l.mine ? 'your half ✓' : l.partner ? 'partner’s half ✓' : 'needs you both') : '🔒 locked';
+      return `<section class="lockgroup" style="--lc:${l.color}">
+        <div class="lg-h"><span class="ico">${l.icon}</span><b>${esc(l.title)}</b><span class="st">${st}</span></div>
+        ${l.final ? '<div class="lg-sub">Last lock: you each enter what your <b>partner’s</b> phone shows.</div>' : ''}
+        ${cards.map(c => cardHtml(c, ticks)).join('')}
+        <button class="btn lg-enter" data-act="open:${l.id}" ${l.mine ? 'disabled' : ''}>${l.mine ? 'Your half is in ✓' : l.final ? 'Enter your partner’s half' : 'Enter answer'} <small>· ${esc(l.format)}</small></button>
+      </section>`;
+    }).join('');
+    if (V.hiddenFinal) h += `<section class="lockgroup mystery">❔ One more lock appears when these are open.</section>`;
+    if (done.length) h += `<div class="opened">${done.map(l => `<span class="chip">🔓 ${esc(l.title)}</span>`).join('')}</div>`;
+    h += `<div class="tickhint">Tip: tap anything on a card to tick it off.</div>`;
   }
   $app.innerHTML = h;
 }
 
 function keypad(l) {
   const i = l.input, kind = i.type, len = i.len || (kind === 'coord' ? 2 : 1);
-  let h = `<div class="row"><button class="btn sm" data-act="back" style="flex:none">← Back</button></div>`;
+  let h = `<div class="row"><button class="btn sm" data-act="back" style="flex:none">← Back to the clues</button></div>`;
   h += note && note[0] === 'bad' ? `<div class="msg bad shake">${esc(note[1])}</div>` : '';
-  h += `<div class="msg you"><span style="font-size:26px">${l.icon}</span> <b>${esc(l.title)}</b><small>${l.final ? 'Enter your <b>partner’s</b> half: ask them what their half-key shows.' : 'Either of you can enter the answer.'}</small></div>`;
-  if (kind !== 'pick') h += `<div class="slots">${Array.from({ length: len }, (_, k) => `<div class="s${value[k] ? ' full' : ''}">${value[k] ? token(kind, value[k]) : ''}</div>`).join('')}</div>`;
+  h += `<div class="msg" style="border-color:${l.color}"><span style="font-size:26px">${l.icon}</span> <b>${esc(l.title)}</b><small>${l.final
+    ? 'Enter your <b>partner’s</b> half: ask them what their card shows.' : 'Either of you can enter the answer.'}</small></div>`;
+  const mine = V.cards.filter(c => c.lock === l.id);
+  if (mine.length && !l.final) h += `<details class="yourclue"><summary>📄 Show your clue</summary>${mine.map(c => cardHtml(c, ticks)).join('')}</details>`;
+  h += `<div class="format">Enter ${esc(l.format)}</div>`;
+  if (kind !== 'pick' && kind !== 'clock') h += `<div class="slots">${Array.from({ length: len }, (_, k) => `<div class="s${value[k] ? ' full' : ''}">${value[k] ? token(kind, value[k]) : ''}</div>`).join('')}</div>`;
   const full = value.length >= len;
   const key = (v, label, cls = '') => `<button class="btn ${cls}" data-act="key:${v}" ${full && kind !== 'pick' && kind !== 'coord' ? 'disabled' : ''}>${label}</button>`;
   if (kind === 'digits') h += `<div class="keys">${'123456789'.split('').map(d => key(d, d)).join('')}<span></span>${key('0', '0')}<span></span></div>`;
@@ -158,21 +206,35 @@ function keypad(l) {
   if (kind === 'pick') h += `<div class="keys pick">${i.options.map(o => `<button class="btn big${value[0] === o ? ' on' : ''}" data-act="key:${o}">${esc(i.label)} ${esc(o)}</button>`).join('')}</div>`;
   if (kind === 'coord') h += `<div class="label">Column</div><div class="keys coord">${[...i.cols].map(c => `<button class="btn${value[0] === c ? ' on' : ''}" data-act="col:${c}">${c}</button>`).join('')}</div>
     <div class="label">Row</div><div class="keys coord">${[...i.rows].map(r => `<button class="btn${value[1] === r ? ' on' : ''}" data-act="row:${r}">${r}</button>`).join('')}</div>`;
-  h += `<div class="row">${kind === 'pick' || kind === 'coord' ? '' : `<button class="btn" data-act="del" ${value.length ? '' : 'disabled'}>⌫</button>`}
+  if (kind === 'clock') h += `<div class="dial"><div class="mid">${value[0] || ''}</div>${Array.from({ length: 12 }, (_, k) => {
+    const hr = k + 1, a = (hr / 12) * 2 * Math.PI;
+    return `<button class="btn${value[0] === String(hr) ? ' on' : ''}" data-act="key:${hr}" style="left:${50 + 40 * Math.sin(a)}%;top:${50 - 40 * Math.cos(a)}%">${hr}</button>`;
+  }).join('')}</div>`;
+  const single = kind === 'pick' || kind === 'clock';
+  h += `<div class="row">${single || kind === 'coord' ? '' : `<button class="btn" data-act="del" ${value.length ? '' : 'disabled'}>⌫</button>`}
     <button class="btn go big" data-act="try" ${full && (kind !== 'coord' || (value[0] && value[1])) ? '' : 'disabled'}>Try it</button></div>`;
   return h;
 }
 
 $app.addEventListener('click', e => {
+  const t = e.target.closest('.clue [data-t]');
+  if (t && !e.target.closest('[data-act]')) {
+    const k = `${t.closest('.clue').dataset.key}:${t.dataset.t}`;
+    ticks.has(k) ? ticks.delete(k) : ticks.add(k);
+    save(tickKey(), [...ticks]);
+    t.toggleAttribute('data-ticked');
+    return;
+  }
   const b = e.target.closest('[data-act]');
   if (!b || b.disabled) return;
+  if (b.dataset.act === 'help') return showHelp(ROLE_CARD(seat));
   if (navigator.vibrate) navigator.vibrate(10);
   const [k, v] = b.dataset.act.split(':');
   const lock = V && V.locks.find(l => l.id === entering), len = lock ? lock.input.len || 1 : 0;
   if (k === 'start' || k === 'next' || k === 'replay') link.act({ a: k });
   else if (k === 'open') { entering = v; value = []; note = null; }
   else if (k === 'back') { entering = null; value = []; note = null; }
-  else if (k === 'key' && lock) { if (lock.input.type === 'pick') value = [v]; else if (value.length < len) value.push(v); }
+  else if (k === 'key' && lock) { if (lock.input.type === 'pick' || lock.input.type === 'clock') value = [v]; else if (value.length < len) value.push(v); }
   else if (k === 'col') value = [v, value[1]];
   else if (k === 'row') value = [value[0], v];
   else if (k === 'del') value.pop();

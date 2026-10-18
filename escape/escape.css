@@ -40,3 +40,42 @@
 .sw small { font-size: 12px; color: var(--ink-2); }
 .tk { display: inline-grid; place-items: center; min-width: 30px; font-weight: 800; font-size: 22px; }
 .key .tk { min-width: 56px; height: 56px; font-size: 32px; background: var(--bg-2); border-radius: 12px; border: 1px solid var(--line); }
+
+/* Second pass: lock colours, ticks and the new card types. --lc is the lock's colour. */
+.clue { border-left: 6px solid var(--lc, var(--line)); }
+.clue.halfkey { border-left-width: 6px; }
+.clue.coach-card { background: linear-gradient(160deg, #22355c, var(--panel)); }
+[data-t] { cursor: pointer; transition: opacity .15s, filter .15s; position: relative; }
+[data-ticked] { opacity: .35; filter: grayscale(.6); }
+[data-ticked]::after { content: '✓'; position: absolute; right: 2px; top: -4px; font-size: 18px; font-weight: 900; color: var(--good); opacity: 1; }
+.coach { margin: 0; padding-left: 24px; font-size: 17px; line-height: 1.45; display: flex; flex-direction: column; gap: 6px; }
+.notes { display: inline-flex; align-items: center; gap: 5px; }
+.notes i { display: inline-block; height: 14px; border-radius: 7px; background: #ffd98a; }
+.notes i.long { width: 38px; } .notes i.short { width: 14px; }
+.bars { display: flex; flex-direction: column; gap: 8px; }
+.bar { display: flex; align-items: center; gap: 12px; background: var(--bg-2); border-radius: 10px; padding: 10px 12px; }
+.bar small { color: var(--ink-2); width: 44px; }
+.legend-notes { color: var(--ink-2); font-size: 13px; margin-top: 8px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.book .num { margin-left: auto; font-size: 22px; color: var(--accent); }
+.drawer { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.drawer span { font-size: 34px; display: grid; place-items: center; height: 56px; background: #2b2318; border-radius: 10px; }
+.say { margin: 8px 0; font-size: 16px; line-height: 1.4; }
+.ordinal { flex-direction: column; height: 76px; }
+.ordinal small { font-size: 11px; color: var(--ink-2); }
+.clock { display: block; }
+.shred { display: flex; gap: 14px; justify-content: center; padding: 10px; background: #efe3c8; border-radius: 10px; }
+.shred .glyph { display: grid; grid-template-columns: repeat(3, 22px); grid-auto-rows: 22px; gap: 2px; }
+.shred i, .legend-notes i { display: block; width: 22px; height: 22px; border-radius: 3px; }
+.legend-notes i { width: 14px; height: 14px; }
+i.paint { background: #b5442f; } i.bare { background: #fff8e7; } i.torn { background: transparent; outline: 2px dashed #a99a7a; outline-offset: -3px; }
+.logic li { padding: 4px 0; }
+.tides { width: 100%; border-collapse: collapse; font-size: 16px; }
+.tides th { color: var(--ink-2); font-weight: 600; padding: 4px; font-size: 13px; }
+.tides td { text-align: center; padding: 8px 0; background: #17304d; border: 2px solid var(--panel); font-weight: 800; font-size: 20px; }
+.ticket { display: flex; gap: 14px; align-items: center; background: #f6ead0; color: #2a1d00; border-radius: 10px; padding: 12px; border: 2px dashed #8a6a3a; }
+.ticket div { display: flex; flex-direction: column; text-align: center; min-width: 96px; }
+.ticket small { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; }
+.ticket b { font-size: 20px; }
+.ticket p { margin: 0; font-size: 15px; line-height: 1.35; }
+.scale { display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 32px; background: var(--bg-2); border-radius: 12px; padding: 8px; margin-bottom: 8px; }
+.scale .beam { font-size: 36px; }

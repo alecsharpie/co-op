@@ -17,39 +17,66 @@
   .top .st { white-space: nowrap; font-weight: 700; }
   .msg { padding: 12px 14px; border-radius: var(--radius); background: var(--panel); border: 2px solid var(--line); font-size: 17px; line-height: 1.35; }
   .msg.you { border-color: var(--accent); }
+  .msg.ok { border-color: var(--good); }
   .msg small { display: block; color: var(--ink-2); font-size: 14px; margin-top: 4px; }
-  .foe { display: flex; align-items: center; gap: 10px; }
-  .foe .ico { font-size: 34px; }
+  .foe { padding: 10px 12px; border-radius: var(--radius); background: var(--bg-2); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+  .foe .line { display: flex; align-items: center; gap: 10px; }
+  .foe .ico { font-size: 30px; }
   .foe .bar { flex: 1; height: 22px; }
   .foe .bar b { font-size: 13px; }
+  .foe .words { font-size: 15px; font-weight: 700; color: #ffd0c8; }
+  .foe .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .foe .pill { font-size: 13px; }
+  .energy { display: flex; align-items: center; gap: 6px; font-weight: 700; }
+  .energy i { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px rgba(255, 207, 90, .6); }
+  .energy i.used { background: var(--bg); border: 2px solid var(--line); box-shadow: none; }
   .hand { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 8px; }
   .hand .card { color: inherit; font: inherit; }
   .center { margin: auto 0; text-align: center; display: flex; flex-direction: column; gap: 14px; }
   .center h1 { margin: 0; font-size: 34px; }
   input { font: inherit; font-size: 28px; padding: 14px; border-radius: var(--radius); border: 2px solid var(--line); background: var(--bg-2); color: var(--ink); text-align: center; width: 100%; }
   input.code { letter-spacing: .25em; text-transform: uppercase; font-weight: 800; }
-  .hints { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-  .hints .btn { font-size: 28px; padding: 0; min-height: 64px; }
+  .hints { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .hints .btn { font-size: 16px; padding: 0 10px; min-height: 56px; justify-content: flex-start; text-align: left; }
+  .hints .btn span { font-size: 24px; margin-right: 6px; }
   .big { min-height: 76px; font-size: 22px; width: 100%; }
   .label { color: var(--ink-2); font-size: 14px; }
   .evs { display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
   .evs div { padding: 8px 10px; border-radius: 10px; background: var(--bg-2); }
   .evs .cmb { border: 1px solid var(--accent); }
-  .opt { width: 100%; text-align: left; padding: 16px; min-height: 76px; }
+  .opt { width: 100%; text-align: left; padding: 14px 16px; min-height: 76px; display: block; }
+  .opt .od { display: block; font-size: 15px; font-weight: 400; color: var(--ink-2); margin-top: 4px; }
   .opt.sel { outline: 3px solid var(--accent); }
+  .opt .vt { display: block; font-size: 14px; color: var(--accent); margin-top: 4px; }
+  .partnerhint { padding: 10px 12px; border-radius: var(--radius); border: 2px dashed var(--accent); font-size: 17px; }
+  .partnerhint b { font-size: 26px; vertical-align: middle; }
+  details { border-radius: var(--radius); background: var(--bg-2); border: 1px solid var(--line); padding: 8px 12px; }
+  summary { cursor: pointer; color: var(--ink-2); font-size: 15px; padding: 4px 0; }
+  .links { display: flex; gap: 8px; }
+  .links .btn { flex: 1; }
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script type="module">
 import { joinRoom, param, load, save } from '../shared/net.js';
-import { CARDS, RELICS, ENEMIES, HINTS } from './cards.js';
+import { showHelp, helpOnce, roleCard } from '../shared/help.js';
+import { card, canUpgrade, RELICS, ENEMIES, HINTS } from './cards.js';
 import { REST } from './game.js';
+import { esc, ROLES, NODE, cardHtml, statusPills, glossaryCard, fullGlossary, HOW_TO_PLAY, INTENT_ICON } from './ui.js';
+import { describeIntent } from './game.js';
 
 const $app = document.getElementById('app');
-const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const ROLE = { warden: ['🛡️', 'Warden'], striker: ['⚔️', 'Striker'] };
-const INTENT_ICON = { atk: '🗡️', block: '🛡️', buff: '💪', charge: '🔔' };
+const ROLE_CARDS = {
+  warden: roleCard({ icon: '🛡️', role: 'Warden', goal: 'Keep the party alive and set up your partner\'s big hits.',
+    can: ['Block for the whole party (🛡️ Guard cards).', 'Weaken the enemy (🕸️ Snare) and mark it (🎯 Mark) so it takes 50% more damage.', 'Heal, and give the party Strength (🚩 Rally).'],
+    partner: ['Deal most of the damage.', 'Turn your 🎯 Mark into a huge Execute, your 🛡️ Guard into a free Reckless Swing…'],
+    tips: ['Look at the red intent box: if a big hit is coming, Block.', 'Cards marked ✨ link with something in your partner\'s deck.', 'Tap any underlined word for its meaning.'] }),
+  striker: roleCard({ icon: '⚔️', role: 'Striker', goal: 'Deal the damage. Your attacks get much stronger when your partner sets them up.',
+    can: ['Attack hard (Strike, Execute, Heavy Blow…).', 'Set up a few of your partner\'s cards too (🎭 Feint, 📣 Battle Cry, 💨 Swift).'],
+    partner: ['Block for the party, Mark and Weaken the enemy, heal.'],
+    tips: ['Ask: "can you Mark this turn?" before you lock in an Execute.', 'Cards marked ✨ link with something in your partner\'s deck.', 'Tap any underlined word for its meaning.'] }),
+};
 
 let status = 'connecting', seat = null, V = null, link = null;
 let sel = [], composingFor = null; // cards picked on this phone before locking in
@@ -76,18 +103,13 @@ function joinForm() {
 function connect(code) {
   link = joinRoom({
     room: code, name: load('coop-name', ''), want: param('want'),
-    onSeat: s => { seat = s; render(); },
+    onSeat: s => { const first = seat !== s; seat = s; render(); if (first) helpOnce('spire-' + s, ROLE_CARDS[s]); },
     onMessage: v => { V = v; render(); },
     onStatus: s => { status = s; render(); },
   });
   render();
 }
 const act = body => link.act(body);
-
-const cardBtn = (id, i, on, off) => {
-  const c = CARDS[id];
-  return `<button class="card ${c.seat}${on ? ' sel' : ''}" data-act="card:${i}" ${off ? 'disabled' : ''}><span class="cost">${c.cost}</span><span class="nm">${esc(c.name)}</span><span class="tx">${esc(c.text)}</span>${c.combo ? `<span class="cb">🤝 ${esc(c.combo.text)}</span>` : ''}${c.tags.length ? `<span class="tg">${c.tags.map(t => `<span>gives ${t}</span>`).join('')}</span>` : ''}</button>`;
-};
 
 function render() {
   if (!seat || !V || V.seat !== seat) {
@@ -97,15 +119,14 @@ function render() {
       seat ? 'Connected. Waiting for the board…' : `Joining room ${esc(room)}…`}</div></div>`;
     return;
   }
-  const [icon, name] = ROLE[seat];
+  const { icon, label } = ROLES[seat];
   const net = status === 'open' ? '' : `<span class="chip"><span class="dot"></span>reconnecting</span>`;
-  const stats = V.started ? `<span class="st">❤️ ${V.hp}</span>${V.block ? `<span class="st">🛡️ ${V.block}</span>` : ''}${V.stage === 'fight' ? `<span class="st">⚡ ${V.energy}</span>` : ''}` : '';
-  let h = `<div class="top"><span class="role">${icon} ${name}</span>${net}<span class="sp"></span>${stats}</div>`;
+  const stats = V.started ? `<span class="st">❤️ ${V.hp}</span>${V.block ? `<span class="st">🛡️ ${V.block}</span>` : ''}` : '';
+  let h = `<div class="top"><span class="role">${icon} ${label}</span>${net}<span class="sp"></span>${stats}<button class="help-btn" data-act="help" aria-label="How to play">?</button></div>`;
 
   if (V.lobby) {
-    h += `<div class="center"><div class="msg">You are the <b>${name}</b>.<small>${seat === 'warden'
-      ? 'Support and control: block, weaken, and mark the target so your partner hits harder.'
-      : 'Damage: your attacks get much stronger when your partner sets them up.'}</small></div>
+    h += `<div class="center"><div class="msg">You are the <b>${label}</b>.<small>${esc(ROLE_CARDS[seat].intro)}</small></div>
+      <button class="btn big" data-act="role">What can I do?</button>
       ${V.canStart ? `<button class="btn go big" data-act="start">${V.started ? 'Resume' : 'Start a run'}</button>` : '<div class="label">Waiting for your partner to join…</div>'}</div>`;
   } else if (V.busy) {
     h += `<div class="msg you">🃏 Reveal! Watch the TV.</div>` + revealHtml();
@@ -120,72 +141,119 @@ function render() {
 function revealHtml() {
   const evs = V.reveal?.events || [];
   return `<div class="evs">${evs.map(e => `<div class="${e.combo ? 'cmb' : ''}">${e.seat === 'enemy' ? esc(e.text)
-    : `${ROLE[e.seat][0]} <b>${esc(CARDS[e.card].name)}</b>${e.combo ? ' 🤝' : ''}: ${esc(e.text)}`}</div>`).join('')}</div>`;
+    : `${ROLES[e.seat].icon} <b>${esc(card(e.card).name)}</b>${e.combo ? ' 🤝 COMBO' : ''}: ${esc(e.text)}`}</div>`).join('')}</div>`;
+}
+
+function foeHtml() {
+  const e = V.enemy;
+  return `<div class="foe"><div class="line"><span class="ico">${e.icon}</span><div class="bar"><i style="width:${100 * e.hp / e.max}%"></i><b>${esc(e.name)} ${e.hp}/${e.max}</b></div></div>
+    <div class="words">${describeIntent(e).map(p => INTENT_ICON[p.k]).join('')} ${esc(e.words)}</div>
+    ${statusPills(e) ? `<div class="row">${statusPills(e)}</div>` : ''}</div>`;
 }
 
 function fightHtml() {
   const key = `${V.floor}:${V.turn}`;
   if (composingFor !== key) { composingFor = key; sel = Array.isArray(V.mine) ? [...V.mine] : []; }
   const lockedMe = V.mine !== null, partnerLocked = V.locked[seat === 'warden' ? 'striker' : 'warden'];
-  const spent = sel.reduce((n, i) => n + CARDS[V.hand[i]].cost, 0);
-  const e = V.enemy;
-  let h = `<div class="foe"><span class="ico">${e.icon}</span><div class="bar"><i style="width:${100 * e.hp / e.max}%"></i><b>${e.hp}/${e.max}${e.block ? ' 🛡️' + e.block : ''}${e.vuln ? ' 🎯' + e.vuln : ''}${e.weak ? ' 🌀' + e.weak : ''}</b></div>
-    <span class="intent" style="font-size:16px;padding:6px 10px">${e.intent.map(p => `${INTENT_ICON[p.k]} ${esc(p.text)}`).join(' ')}</span></div>`;
-  h += `<div class="msg${lockedMe ? '' : ' you'}">${lockedMe
-    ? `✅ Locked in.<small>${partnerLocked ? 'Revealing…' : `Waiting for ${esc(V.partner)}…`}</small>`
-    : `Pick cards in secret: ${spent}/${V.energy} energy.<small>${esc(V.partner)} ${partnerLocked ? 'has locked in.' : 'is choosing.'}${V.partnerHint ? ` Hint from them: <span style="font-size:22px">${V.partnerHint}</span>` : ''}${V.quiet ? ' Quiet mode: hints only.' : ''}</small>`}</div>`;
-  h += `<div class="hand">${V.hand.map((id, i) => cardBtn(id, i, sel.includes(i), lockedMe || (!sel.includes(i) && spent + CARDS[id].cost > V.energy))).join('')}</div>`;
+  const spent = sel.reduce((n, i) => n + card(V.hand[i]).cost, 0);
+  let h = '';
+  if (V.tip) h += `<div class="tipbar">🎓 ${V.tip}</div>`;
+  h += foeHtml();
+  const ph = V.partnerHint && HINTS.find(x => x.e === V.partnerHint);
+  if (ph) h += `<div class="partnerhint">${esc(V.partner)} says: <b>${ph.e}</b> ${esc(ph.t)}</div>`;
+  h += `<div class="msg${lockedMe ? ' ok' : ' you'}">${lockedMe
+    ? `✅ Locked in.<small>${partnerLocked ? 'Revealing…' : `Waiting for ${esc(V.partner)} to lock in. You can still change your mind.`}</small>`
+    : `<div class="energy">${Array.from({ length: V.energy }, (_, i) => `<i class="${i < spent ? 'used' : ''}"></i>`).join('')} <span>${V.energy - spent} of ${V.energy} <span class="kw" data-kw="Energy">energy</span> left</span></div>
+      <small>Tap cards to pick them in secret. ${esc(V.partner)} ${partnerLocked ? '<b>has locked in.</b>' : 'is choosing.'}${V.quiet ? ' 🤫 Quiet mode: hints only, no talking about cards.' : ''}</small>`}</div>`;
+  h += `<div class="hand">${V.hand.map((id, i) => {
+    const c = card(id), on = sel.includes(i);
+    return cardHtml(id, { act: `card:${i}`, sel: on, partnerDeck: V.partnerDeck, off: lockedMe || c.unplayable || (!on && spent + c.cost > V.energy) });
+  }).join('')}</div>`;
   if (!lockedMe) {
-    h += `<button class="btn go big" data-act="lock">${sel.length ? 'Lock in' : 'Lock in (play nothing)'}</button>`;
-    h += V.myHint ? `<div class="label" style="text-align:center">You hinted ${V.myHint}</div>`
-      : `<div class="label">Send one hint to ${esc(V.partner)}</div><div class="hints">${HINTS.map(x => `<button class="btn" data-act="hint:${x}">${x}</button>`).join('')}</div>`;
-  } else if (!partnerLocked) h += `<button class="btn big" data-act="unlock">Change my mind</button>`;
-  if (V.reveal && V.reveal.turn === V.turn - 1) h += `<div class="label">Last turn</div>` + revealHtml();
+    h += `<button class="btn go big" data-act="lock">${sel.length ? `Lock in ${sel.length} card${sel.length > 1 ? 's' : ''}: ${sel.map(i => esc(card(V.hand[i]).name)).join(', ')}` : 'Lock in (play nothing)'}</button>`;
+    h += V.myHint ? `<div class="label" style="text-align:center">You told ${esc(V.partner)}: ${V.myHint} ${esc(HINTS.find(x => x.e === V.myHint)?.t || '')}</div>`
+      : `<div class="label">Send ${esc(V.partner)} one hint${V.quiet ? '' : ' (or just talk)'}</div><div class="hints">${HINTS.map(x => `<button class="btn" data-act="hint:${x.e}"><span>${x.e}</span>${esc(x.t)}</button>`).join('')}</div>`;
+  } else if (!partnerLocked) h += `<button class="btn big" data-act="unlock">↩︎ Change my mind</button>`;
+  h += `<div class="links"><button class="btn sm" data-act="deck">📚 My deck (${V.myDeck.length})</button><button class="btn sm" data-act="pdeck">🤝 ${esc(V.partner)}'s deck</button><button class="btn sm" data-act="words">📖 Words</button></div>`;
+  if (V.reveal && V.reveal.turn === V.turn - 1) h += `<details><summary>What happened last turn</summary>${revealHtml()}</details>`;
   return h;
+}
+
+function voteNote(value) {
+  const me = V.mine === value, wait = !!V.locked[seat];
+  return wait && me ? '<span class="vt">✅ Your choice</span>' : '';
 }
 
 function stageHtml() {
   const mine = V.mine, wait = !!V.locked[seat];
   const waitMsg = `<div class="label" style="text-align:center">Chosen. Waiting for ${esc(V.partner)}…</div>`;
+  const clash = V.mismatch ? `<div class="msg" style="border-color:var(--bad)">You two picked different ones. Talk it over, then pick the same.</div>` : '';
   if (V.stage === 'reward') {
-    return `<div class="msg you">Victory! Add a card to your deck.</div>
-      <div class="hand">${V.rewards.map((id, i) => cardBtn(id, i, wait && mine === id, wait)).join('')}</div>
-      ${wait ? waitMsg : `<button class="btn big" data-act="skip">Skip</button>`}`;
+    const f = V.lastFight;
+    return `<div class="msg you">Victory! Add one card to <b>your</b> deck, or skip.${f ? `<small>Won in ${f.turns} turns with ${f.combos} combo${f.combos === 1 ? '' : 's'}.</small>` : ''}</div>
+      <div class="hand">${V.rewards.map((id, i) => cardHtml(id, { act: `card:${i}`, sel: wait && mine === id, off: wait, partnerDeck: V.partnerDeck })).join('')}</div>
+      ${wait ? waitMsg : `<button class="btn big" data-act="skip">Skip (keep my deck lean)</button>`}`;
+  }
+  if (V.stage === 'upgrade') {
+    return `<div class="msg you">🔥 Training: pick one card to upgrade.<small>Upgraded cards have bigger numbers and a +.</small></div>
+      ${V.myDeck.map((id, i) => !canUpgrade(id) || V.myDeck.indexOf(id) !== i ? '' : `<button class="btn opt${wait && mine === i ? ' sel' : ''}" data-act="upg:${i}" ${wait ? 'disabled' : ''}><b>${esc(card(id).name)}</b> → <b>${esc(card(id + '+').name)}</b><span class="od">${esc(card(id).text)} → ${esc(card(id + '+').text)}</span></button>`).join('')}
+      ${wait ? waitMsg : `<button class="btn big" data-act="upg:none">Skip</button>`}`;
   }
   if (V.stage === 'relic') {
-    return `<div class="msg you">Choose a relic together.<small>You both need to pick the same one.${V.mismatch ? ' <b>You picked different ones last time: talk it over.</b>' : ''}</small></div>
-      ${V.relicChoices.map(id => `<button class="btn opt${wait && mine === id ? ' sel' : ''}" data-act="relic:${id}" ${wait ? 'disabled' : ''}>${RELICS[id].icon} <b>${esc(RELICS[id].name)}</b><br><span class="label">${esc(RELICS[id].text)}</span></button>`).join('')}
+    return `<div class="msg you">Choose a relic together.<small>You both need to pick the same one.</small></div>${clash}
+      ${V.relicChoices.map(id => `<button class="btn opt${wait && mine === id ? ' sel' : ''}" data-act="relic:${id}" ${wait ? 'disabled' : ''}>${RELICS[id].icon} <b>${esc(RELICS[id].name)}</b><span class="od">${esc(RELICS[id].text)}</span>${voteNote(id)}</button>`).join('')}
       ${wait ? waitMsg : ''}`;
   }
   if (V.stage === 'rest') {
-    return `<div class="msg you">🔥 A campfire. Agree on one.${V.mismatch ? '<small><b>You picked different ones: talk it over.</b></small>' : ''}</div>
-      ${Object.entries(REST).map(([k, t]) => `<button class="btn opt${wait && mine === k ? ' sel' : ''}" data-act="rest:${k}" ${wait ? 'disabled' : ''}>${esc(t)}</button>`).join('')}
+    return `<div class="msg you">🔥 A campfire. Agree on one.</div>${clash}
+      ${Object.entries(REST).map(([k, t]) => `<button class="btn opt${wait && mine === k ? ' sel' : ''}" data-act="rest:${k}" ${wait ? 'disabled' : ''}>${esc(t)}<span class="od">❤️ ${V.hp} / ${V.maxHp}</span>${voteNote(k)}</button>`).join('')}
+      ${wait ? waitMsg : ''}`;
+  }
+  if (V.stage === 'event') {
+    const ev = V.event;
+    return `<div class="msg you">${ev.icon} <b>${esc(ev.title)}</b><small>${esc(ev.text)} Agree on one together.</small></div>${clash}
+      ${ev.options.map(o => `<button class="btn opt${wait && mine === o.id ? ' sel' : ''}" data-act="event:${o.id}" ${wait ? 'disabled' : ''}><b>${esc(o.label)}</b><span class="od">${esc(o.desc)}</span>${voteNote(o.id)}</button>`).join('')}
       ${wait ? waitMsg : ''}`;
   }
   if (V.stage === 'map') {
-    const n = V.nextFloor;
-    return `<div class="center"><div class="msg">Floor ${V.floor + 1} cleared.<small>Good stopping point: the run is saved.</small></div>
-      <div class="label">Next: ${n.enemy ? esc(ENEMIES[n.enemy].name) : 'a campfire'}</div>
-      <button class="btn go big" data-act="advance">Climb on</button></div>`;
+    const opts = V.options;
+    const blurb = n => n.enemy ? `${ENEMIES[n.enemy].icon} ${esc(ENEMIES[n.enemy].name)}: ${esc(ENEMIES[n.enemy].about)}` : n.type === 'rest' ? 'Heal, or each upgrade a card.' : 'A surprise, decided together.';
+    return `<div class="msg">Floor ${V.floor + 1} cleared.<small>${V.note ? esc(V.note) + ' ' : ''}Good stopping point: the run is saved.</small></div>
+      ${opts.length > 1 ? `<div class="msg you">The path splits. Choose together.</div>${clash}
+        ${opts.map((n, i) => `<button class="btn opt${wait && mine === i ? ' sel' : ''}" data-act="path:${i}" ${wait ? 'disabled' : ''}>${NODE[n.type].icon} <b>${NODE[n.type].name}</b><span class="od">${blurb(n)}</span>${voteNote(i)}</button>`).join('')}
+        ${wait ? waitMsg : ''}`
+      : `<div class="label">Next: ${NODE[opts[0].type].icon} ${blurb(opts[0])}</div><button class="btn go big" data-act="advance">Climb on</button>`}`;
   }
   return `<div class="center"><div class="msg you">${V.stage === 'won' ? '🔔 You reached the top!' : '💀 The climb ends.'}<small>${esc(V.why)}</small></div>
     <button class="btn go big" data-act="newrun">New run</button></div>`;
 }
 
+const deckCard = (title, ids) => ({ icon: '📚', title, sections: [{ h: `${ids.length} cards`, items: [...ids].sort().map(id => `<b>${esc(card(id).name)}</b> (${card(id).cost}⚡): ${esc(card(id).text)}${card(id).combo ? ` <i>🤝 ${esc(card(id).combo.text)}</i>` : ''}`) }] });
+
 $app.addEventListener('click', e => {
+  const k = e.target.closest('.kw');
+  if (k) { e.preventDefault(); return showHelp(glossaryCard(k.dataset.kw)); }
   const b = e.target.closest('[data-act]');
   if (!b || b.disabled) return;
   if (navigator.vibrate) navigator.vibrate(10);
-  const [k, v] = b.dataset.act.split(/:(.*)/);
-  if (k === 'card' && V.stage === 'fight') { const i = +v; sel = sel.includes(i) ? sel.filter(x => x !== i) : [...sel, i]; return render(); }
-  if (k === 'card' && V.stage === 'reward') act({ a: 'reward', card: V.rewards[+v] });
-  else if (k === 'skip') act({ a: 'reward', card: null });
-  else if (k === 'lock') act({ a: 'pick', idxs: sel });
-  else if (k === 'unlock') act({ a: 'unpick' });
-  else if (k === 'hint') act({ a: 'hint', emoji: v });
-  else if (k === 'relic') act({ a: 'relic', id: v });
-  else if (k === 'rest') act({ a: 'rest', choice: v });
-  else if (['start', 'advance', 'newrun'].includes(k)) act({ a: k });
+  const [a, v] = b.dataset.act.split(/:(.*)/);
+  if (a === 'help') return showHelp(V && seat ? { ...ROLE_CARDS[seat], sections: [...ROLE_CARDS[seat].sections, ...HOW_TO_PLAY.sections.slice(0, 1)] } : HOW_TO_PLAY);
+  if (a === 'role') return showHelp(ROLE_CARDS[seat]);
+  if (a === 'deck') return showHelp(deckCard('Your deck', V.myDeck));
+  if (a === 'pdeck') return showHelp(deckCard(`${V.partner}'s deck`, V.partnerDeck));
+  if (a === 'words') return showHelp(fullGlossary());
+  if (a === 'card' && V.stage === 'fight') { const i = +v; sel = sel.includes(i) ? sel.filter(x => x !== i) : [...sel, i]; return render(); }
+  if (a === 'card' && V.stage === 'reward') act({ a: 'reward', card: V.rewards[+v] });
+  else if (a === 'skip') act({ a: 'reward', card: null });
+  else if (a === 'upg') act({ a: 'upgrade', idx: v === 'none' ? null : +v });
+  else if (a === 'lock') act({ a: 'pick', idxs: sel });
+  else if (a === 'unlock') act({ a: 'unpick' });
+  else if (a === 'hint') act({ a: 'hint', emoji: v });
+  else if (a === 'relic') act({ a: 'relic', id: v });
+  else if (a === 'rest') act({ a: 'rest', choice: v });
+  else if (a === 'event') act({ a: 'event', option: v });
+  else if (a === 'path') act({ a: 'path', choice: +v });
+  else if (['start', 'advance', 'newrun'].includes(a)) act({ a });
 });
 addEventListener('resize', render);
 </script>

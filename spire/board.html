@@ -9,62 +9,72 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <style>
   body { display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
-  header { display: flex; align-items: center; gap: 14px; padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--bg-2); }
-  header h1 { margin: 0; font-size: 22px; }
+  header { display: flex; align-items: center; gap: 14px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--bg-2); }
+  header h1 { margin: 0; font-size: 22px; white-space: nowrap; }
   header .sp { flex: 1; }
-  .map { display: flex; gap: 6px; align-items: center; }
-  .map span { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: var(--panel); border: 2px solid var(--line); font-size: 18px; opacity: .5; }
-  .map span.done { opacity: .9; border-color: var(--good); }
-  .map span.now { opacity: 1; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255, 207, 90, .35); }
-  main { display: grid; grid-template-columns: 300px 1fr 300px; gap: 20px; padding: 20px; min-height: 0; }
-  .player { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 18px; background: var(--bg-2); border: 1px solid var(--line); min-height: 0; }
+  main { display: grid; grid-template-columns: 300px 1fr 300px; gap: 18px; padding: 16px 20px 64px; min-height: 0; }
+  .player { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 18px; background: var(--bg-2); border: 1px solid var(--line); min-height: 0; }
   .player h2 { margin: 0; font-size: 22px; }
-  .player .state { font-size: 18px; }
-  .player .hint { font-size: 56px; text-align: center; min-height: 64px; }
-  .player .played { display: flex; flex-direction: column; gap: 10px; overflow: auto; }
+  .player .state { font-size: 22px; font-weight: 700; padding: 10px 12px; border-radius: 12px; background: var(--panel); text-align: center; }
+  .player .state.done { color: var(--good); }
+  .player .hint { text-align: center; padding: 8px; border-radius: 12px; border: 2px dashed var(--line); }
+  .player .hint b { display: block; font-size: 44px; line-height: 1.1; }
+  .player .deckinfo { color: var(--ink-2); font-size: 14px; }
+  .player .played { display: flex; flex-direction: column; gap: 8px; overflow: auto; }
   .player .played .card { min-height: 0; cursor: default; }
-  .player .played .ev { font-size: 15px; font-weight: 700; color: var(--ink); }
-  .middle { display: flex; flex-direction: column; gap: 18px; align-items: center; min-height: 0; }
-  .enemy { text-align: center; width: 100%; max-width: 560px; }
-  .enemy .ico { font-size: 140px; line-height: 1.1; transition: transform .2s; }
+  .player .played .ev { font-size: 15px; font-weight: 700; color: var(--ink); margin-top: -2px; }
+  .middle { display: flex; flex-direction: column; gap: 14px; align-items: center; min-height: 0; overflow: auto; }
+  .enemy { text-align: center; width: 100%; max-width: 600px; }
+  .enemy .ico { font-size: 120px; line-height: 1.05; transition: transform .2s; }
   .enemy .ico.hurt { transform: scale(.9) rotate(-6deg); filter: brightness(1.6); }
-  .enemy h2 { margin: 4px 0 10px; font-size: 30px; }
+  .enemy h2 { margin: 2px 0 2px; font-size: 30px; }
+  .enemy .about { color: var(--ink-2); font-size: 16px; margin-bottom: 10px; }
+  .enemy .words { font-size: 20px; font-weight: 700; margin: 8px 0 12px; color: #ffd0c8; }
   .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
-  .party { width: 100%; max-width: 560px; padding: 16px; border-radius: 18px; background: var(--bg-2); border: 1px solid var(--line); }
-  .party .lbl { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 18px; }
-  .log { color: var(--ink-2); font-size: 16px; line-height: 1.5; text-align: center; max-width: 560px; }
-  .banner { font-size: 20px; text-align: center; padding: 12px 18px; border-radius: var(--radius); background: var(--panel); border: 2px solid var(--accent); }
-  .overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(5, 10, 20, .84); z-index: 10; padding: 24px; }
-  .panel { max-width: 900px; text-align: center; padding: 32px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 24px; }
-  .panel h2 { font-size: 38px; margin: 0 0 10px; }
-  .panel p { font-size: 20px; color: var(--ink-2); }
+  .party { width: 100%; max-width: 600px; padding: 14px 16px; border-radius: 18px; background: var(--bg-2); border: 1px solid var(--line); }
+  .party .lbl { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 18px; flex-wrap: wrap; }
+  .log { color: var(--ink-2); font-size: 16px; line-height: 1.5; text-align: center; max-width: 600px; }
+  .overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(5, 10, 20, .86); z-index: 10; padding: 24px; overflow: auto; }
+  .panel { max-width: 980px; text-align: center; padding: 30px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 24px; }
+  .panel h2 { font-size: 38px; margin: 0 0 8px; }
+  .panel p { font-size: 20px; color: var(--ink-2); margin: 8px 0; }
   .panel .opts { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin: 18px 0; }
-  .panel .opt { width: 240px; padding: 18px; border-radius: 18px; background: var(--panel); border: 2px solid var(--line); }
-  .panel .opt .big { font-size: 54px; }
+  .panel .opt { width: 260px; padding: 18px; border-radius: 18px; background: var(--panel); border: 2px solid var(--line); text-align: left; }
+  .panel .opt .big { font-size: 54px; text-align: center; }
+  .panel .opt h3 { margin: 6px 0; }
+  .panel .opt .votes { margin-top: 10px; font-size: 15px; color: var(--accent); min-height: 20px; }
+  .summary { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 12px 0; }
+  .summary div { padding: 10px 16px; border-radius: 14px; background: var(--panel); font-size: 18px; }
+  .summary b { display: block; font-size: 28px; }
   .settings { position: fixed; right: 16px; bottom: 12px; display: flex; gap: 8px; z-index: 5; }
 </style>
 </head>
 <body>
 <header>
   <h1>🃏 Co-op Spire</h1>
-  <div class="map" id="map"></div>
+  <div class="minimap" id="map"></div>
   <span class="sp"></span>
+  <span class="chip" id="asc"></span>
   <span class="chip" id="net"><span class="dot"></span><span>connecting</span></span>
   <span class="chip" id="room"></span>
+  <button class="help-btn" data-act="help" aria-label="How to play">?</button>
 </header>
 <main>
   <div class="player" id="p-warden"></div>
   <div class="middle">
-    <div class="banner" id="banner"></div>
+    <div class="steps" id="steps"></div>
+    <div class="tipbar hidden" id="tip"></div>
     <div class="enemy" id="enemy"></div>
     <div class="party" id="party"></div>
     <div class="log" id="log"></div>
   </div>
   <div class="player" id="p-striker"></div>
 </main>
+<div class="narrate hidden" id="narrate"></div>
 <div class="settings">
   <button class="btn sm" id="mode"></button>
   <button class="btn sm" id="swap">Swap roles</button>
+  <button class="btn sm" data-act="help">How to play</button>
   <button class="btn sm" id="seats">Show join code</button>
   <button class="btn sm" id="abandon">New run</button>
 </div>
@@ -74,23 +84,22 @@
 <script type="module">
 import { hostRoom, load, save } from '../shared/net.js';
 import { renderLobby, findLan } from '../shared/lobby.js';
-import { newTurn, submit, withdraw, phaseOf, lockedIn } from '../shared/phases.js';
-import { SEATS, PHASES, VOTE, partnerOf, newRun, resolve, validPick, describeIntent, chooseReward, chooseRelic, rest, advance, hint, REST, nodeOf } from './game.js';
-import { CARDS, ENEMIES, RELICS, MAP, HINTS } from './cards.js';
+import { showHelp, helpOnce } from '../shared/help.js';
+import { newTurn, submit, withdraw, lockedIn } from '../shared/phases.js';
+import { SEATS, PHASES, VOTE, MAX_ASC, partnerOf, newRun, resolve, validPick, describeIntent, intentWords, chooseReward, chooseRelic, chooseUpgrade, chooseEvent, rest, advance, hint, REST, nodeOf, nextOptions, isTutorial } from './game.js';
+import { card, canUpgrade, ENEMIES, RELICS, EVENTS, HINTS, TAGS } from './cards.js';
+import { esc, ROLES, NODE, cardHtml, intentHtml, statusPills, glossaryCard, HOW_TO_PLAY } from './ui.js';
 
 const $ = id => document.getElementById(id);
-const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const ROLES = {
-  warden: { label: 'Warden', icon: '🛡️', blurb: 'support and control: block, weaken, mark the target' },
-  striker: { label: 'Striker', icon: '⚔️', blurb: 'damage: attacks that hit harder with the right setup' },
-};
-const NODE_ICON = { fight: '⚔️', rest: '🔥', elite: '💀', boss: '🔔' };
-const INTENT_ICON = { atk: '🗡️', block: '🛡️', buff: '💪', charge: '🔔' };
-
 const room = hostRoom({ game: 'spire', seats: SEATS, onSeats: render, onAction, onStatus });
 const KEY = `coop-spire-${room.room}`;
-// the save: the run plus whatever the current phase has collected
-let S = load(KEY) || { lobby: true, run: null, turn: newTurn(), reveal: null, mismatch: null, quiet: false };
+// across runs on this board: the highest Ascension unlocked, and whether the training fight has been played
+const meta = load('coop-spire-meta') || { maxAsc: 0, wins: 0, runs: 0, tutorialDone: false };
+const saveMeta = () => save('coop-spire-meta', meta);
+// the save: the run plus whatever the current phase has collected. v2 runs only (older saves start fresh).
+let S = load(KEY);
+if (!S || S.run?.v !== 2 && S.run) S = null;
+S = S || { lobby: true, run: null, turn: newTurn(), reveal: null, mismatch: null, quiet: false, asc: meta.maxAsc };
 let busy = false, shown = 0; // revealing the cards one event at a time
 const persist = () => { if (!busy) save(KEY, S); };
 
@@ -104,18 +113,28 @@ function onStatus(st) {
 const bothSeated = () => SEATS.every(s => room.seat(s));
 const nameOf = seat => room.seat(seat)?.name || ROLES[seat].label;
 function setRun(run) { S.run = run; S.turn = newTurn(); S.mismatch = null; persist(); render(); }
+function freshRun() {
+  meta.runs++; saveMeta();
+  S.reveal = null;
+  setRun(newRun(Date.now(), { asc: Math.min(S.asc, meta.maxAsc), tutorial: !meta.tutorialDone }));
+}
 
 function onAction(seat, a) {
   if (!a || typeof a !== 'object' || busy) return;
   const r = S.run;
-  if (a.a === 'start' && S.lobby && bothSeated()) { S.lobby = false; if (!r) S.run = newRun(); persist(); return render(); }
+  if (a.a === 'start' && S.lobby && bothSeated()) {
+    S.lobby = false;
+    if (!r) freshRun(); else { persist(); render(); }
+    helpOnce('spire-board', HOW_TO_PLAY);
+    return;
+  }
   if (S.lobby || !r) return;
-  if (a.a === 'newrun' && ['won', 'lost'].includes(r.stage)) { S.reveal = null; return setRun(newRun()); }
-  if (a.a === 'advance' && r.stage === 'map') { S.reveal = null; return setRun(advance(r)); }
+  if (a.a === 'newrun' && ['won', 'lost'].includes(r.stage)) return freshRun();
+  if (a.a === 'advance' && r.stage === 'map' && nextOptions(r).length === 1) { S.reveal = null; return setRun(advance(r, 0)); }
   if (!seat) return;
 
   if (r.stage === 'fight') {
-    if (a.a === 'hint' && HINTS.includes(a.emoji) && !r.hints[seat] && !(seat in S.turn.got)) { S.run = hint(r, seat, a.emoji); persist(); return render(); }
+    if (a.a === 'hint' && HINTS.some(h => h.e === a.emoji) && !r.hints[seat] && !(seat in S.turn.got)) { S.run = hint(r, seat, a.emoji); persist(); return render(); }
     if (a.a === 'unpick') { S.turn = withdraw(PHASES, S.turn, seat); persist(); return render(); }
     if (a.a === 'pick' && validPick(r, seat, a.idxs)) {
       const res = submit(PHASES, S.turn, seat, a.idxs);
@@ -124,92 +143,148 @@ function onAction(seat, a) {
       persist(); return render();
     }
   }
-  const vote = (value, apply) => {
+  // a choice between fights: per seat (rewards, upgrades) or agreed by both (everything else)
+  const vote = (value, apply, agree) => {
     const res = submit(VOTE, S.turn, seat, value);
     S.turn = res.turn; S.mismatch = null;
     if (res.done) {
       const m = res.done.moves;
-      if (apply.agree && m.warden !== m.striker) { S.mismatch = m; S.turn = newTurn(); }
-      else return setRun(apply(m));
+      if (agree && m.warden !== m.striker) { S.mismatch = m; S.turn = newTurn(); }
+      else { S.reveal = null; return setRun(apply(m)); }
     }
     persist(); render();
   };
   if (r.stage === 'reward' && a.a === 'reward' && (a.card === null || r.rewards[seat].includes(a.card))) vote(a.card, m => chooseReward(r, m));
-  if (r.stage === 'relic' && a.a === 'relic' && r.relicChoices.includes(a.id)) vote(a.id, Object.assign(m => chooseRelic(r, m.warden), { agree: true }));
-  if (r.stage === 'rest' && a.a === 'rest' && a.choice in REST) vote(a.choice, Object.assign(m => rest(r, m.warden), { agree: true }));
+  if (r.stage === 'upgrade' && a.a === 'upgrade' && (a.idx === null || (Number.isInteger(a.idx) && r.decks[seat][a.idx] && canUpgrade(r.decks[seat][a.idx])))) vote(a.idx, m => chooseUpgrade(r, m));
+  if (r.stage === 'relic' && a.a === 'relic' && r.relicChoices.includes(a.id)) vote(a.id, m => chooseRelic(r, m.warden), true);
+  if (r.stage === 'rest' && a.a === 'rest' && a.choice in REST) vote(a.choice, m => rest(r, m.warden), true);
+  if (r.stage === 'event' && a.a === 'event' && EVENTS[r.event].options.some(o => o.id === a.option)) vote(a.option, m => chooseEvent(r, m.warden), true);
+  if (r.stage === 'map' && a.a === 'path' && Number.isInteger(a.choice) && a.choice >= 0 && a.choice < nextOptions(r).length) vote(a.choice, m => advance(r, m.warden), true);
 }
 
+const wait = ms => new Promise(res => setTimeout(res, ms));
 async function reveal(r, picks) {
   const played = Object.fromEntries(SEATS.map(seat => [seat, picks[seat].map(i => r.piles[seat].hand[i])]));
   const { state, events, mid } = resolve(r, picks);
   S.reveal = { played, events, turn: r.turn };
   busy = true; shown = 0; render();
+  const lastCard = events.filter(x => x.seat !== 'enemy').length;
   for (shown = 1; shown <= events.length; shown++) {
     // the bars move with the reveal: after the players' cards, then after the enemy
     const ev = events[shown - 1];
-    if (ev.seat !== 'enemy' && shown === events.filter(x => x.seat !== 'enemy').length)
+    if (ev.seat !== 'enemy' && shown === lastCard)
       S.run = { ...r, enemy: { ...r.enemy, hp: mid.enemyHp, block: mid.enemyBlock }, hp: mid.hp, block: mid.block };
     if (ev.seat === 'enemy') S.run = { ...state, stage: 'fight', turn: r.turn, enemy: { ...state.enemy, i: r.enemy.i } };
     render();
-    if (events[shown - 1].seat !== 'enemy' && /damage/.test(events[shown - 1].text)) hurt();
-    await new Promise(res => setTimeout(res, 750));
+    narrate(ev);
+    if (ev.seat !== 'enemy' && /damage/.test(ev.text)) hurt();
+    await wait(ev.combo ? 2300 : ev.seat === 'enemy' ? 1500 : 1200);
   }
+  $('narrate').classList.add('hidden');
   busy = false;
+  if (state.stage === 'reward' && isTutorial(state)) { meta.tutorialDone = true; saveMeta(); }
+  if (state.stage === 'won') { meta.wins++; meta.maxAsc = Math.min(MAX_ASC, Math.max(meta.maxAsc, state.asc + 1)); S.asc = meta.maxAsc; saveMeta(); }
   setRun(state);
 }
 function hurt() { const i = document.querySelector('.enemy .ico'); if (!i) return; i.classList.add('hurt'); setTimeout(() => i.classList.remove('hurt'), 220); }
 
-const cardHtml = (id, extra = '') => {
-  const c = CARDS[id];
-  return `<div class="card ${c.seat} ${extra}"><span class="cost">${c.cost}</span><div class="nm">${esc(c.name)}</div><div class="tx">${esc(c.text)}</div>${c.combo ? `<div class="cb">🤝 ${esc(c.combo.text)}</div>` : ''}${c.tags.length ? `<div class="tg">${c.tags.map(t => `<span>gives ${t}</span>`).join('')}</div>` : ''}</div>`;
-};
-const intentHtml = e => describeIntent(e).map(p => `<span>${INTENT_ICON[p.k]} ${esc(p.text)}</span>`).join('');
+// The big line across the TV saying what just happened; combos get the pair and a splash.
+function narrate(ev) {
+  const el = $('narrate');
+  if (ev.seat === 'enemy') el.innerHTML = `<div class="nar enemy">${esc(ev.text)}</div>`;
+  else if (ev.combo) {
+    const c = card(ev.card), p = card(ev.partnerCard);
+    el.innerHTML = `<div class="nar combo"><div class="boom">🤝 COMBO!</div><div class="pair"><span>${ROLES[partnerOf(ev.seat)].icon} ${esc(p.name)}</span><b>+</b><span>${ROLES[ev.seat].icon} ${esc(c.name)}</span></div><div>${esc(ev.text)}</div></div>`;
+  } else el.innerHTML = `<div class="nar">${ROLES[ev.seat].icon} <b>${esc(nameOf(ev.seat))}</b> plays <b>${esc(card(ev.card).name)}</b>: ${esc(ev.text)}</div>`;
+  el.classList.remove('hidden');
+}
+
+// What the training fight tells each seat, turn by turn.
+function tutorialTip(r, seat) {
+  if (!isTutorial(r) || r.stage !== 'fight') return null;
+  if (r.turn === 1) return seat === 'warden'
+    ? 'Training! Tap <b>🎯 Mark Target</b>, then <b>Lock in</b>. It makes the dummy Vulnerable, and it powers your partner\'s Execute.'
+    : seat === 'striker'
+    ? 'Training! Tap <b>Execute</b> (it costs 2 ⚡), then <b>Lock in</b>. If your partner plays a 🎯 Mark card this turn, Execute deals 15 instead of 7, and Vulnerable makes it 22!'
+    : 'Training fight. Warden: play 🎯 Mark Target. Striker: play Execute. Then both lock in and watch the combo.';
+  if (r.turn === 2) return `The dummy will attack for ${describeIntent(r.enemy).find(p => p.k === 'atk')?.total ?? 0} (the red box). Try this: one of you blocks with a 🛡️ card while the other attacks.`;
+  return 'Finish it off! Tap any underlined word on a card to see what it means.';
+}
 
 function render() {
   const r = S.run;
   $('mode').textContent = S.quiet ? 'Quiet: hints only' : 'Talk freely';
+  $('asc').textContent = r ? `Ascension ${r.asc}` : `Ascension ${S.asc}`;
   $('lobby').classList.toggle('hidden', !S.lobby);
   if (S.lobby) renderLobby($('lobby'), {
     room: room.room, title: 'Co-op Spire',
     seats: SEATS.map(k => ({ ...ROLES[k], taken: !!room.seat(k), name: room.seat(k)?.name, connected: room.connected(k) })),
-    startable: bothSeated(), startLabel: r ? `Resume floor ${r.floor + 1}` : 'Start a run',
+    startable: bothSeated(), startLabel: r ? `Resume floor ${r.floor + 1}` : meta.tutorialDone ? 'Start a run' : 'Start (with a training fight)',
   });
   if (!r) return sendViews();
 
-  $('map').innerHTML = MAP.map((n, i) => `<span class="${i < r.floor ? 'done' : i === r.floor ? 'now' : ''}" title="${n.type}">${NODE_ICON[n.type]}</span>`).join('');
+  // the map in the header: one column per floor, the path taken lit
+  $('map').innerHTML = r.map.map((opts, f) => `<div class="col">${opts.map((n, i) => {
+    const on = f < r.floor ? r.path[f] === i : f === r.floor ? r.path[f] === i : false;
+    return `<span class="${f < r.floor ? (on ? 'done' : 'skip') : f === r.floor && on ? 'now' : ''}" title="${NODE[n.type].name}">${NODE[n.type].icon}</span>`;
+  }).join('')}</div>`).join('<i></i>');
+
   const inFight = r.stage === 'fight' || busy;
   const locked = lockedIn(PHASES, S.turn);
 
   for (const seat of SEATS) {
     const rv = busy || (S.reveal && r.stage === 'fight' && S.reveal.turn === r.turn - 1) ? S.reveal : null;
     let evs = [];
-    if (rv) { evs = rv.events.map((e, i) => ({ ...e, i })).filter(e => e.seat === seat && (!busy || e.i < shown)); }
-    const state = !inFight ? '' : busy ? 'revealed' : locked[seat] ? '✅ Locked in' : '🤔 Choosing…';
+    if (rv) evs = rv.events.map((e, i) => ({ ...e, i })).filter(e => e.seat === seat && (!busy || e.i < shown));
+    const h = r.hints?.[seat] && HINTS.find(x => x.e === r.hints[seat]);
+    const pile = r.piles?.[seat];
     $('p-' + seat).innerHTML = `
       <h2>${ROLES[seat].icon} ${esc(nameOf(seat))}</h2>
       <div class="chip"><span class="dot${room.connected(seat) ? ' on' : ''}"></span>${ROLES[seat].label}</div>
-      ${inFight ? `<div class="state">${state}</div>${!busy && r.hints?.[seat] ? `<div class="hint">${r.hints[seat]}</div>` : ''}` : ''}
-      <div class="played">${evs.map(e => cardHtml(e.card, e.combo ? 'combo' : '') + `<div class="ev">${e.combo ? '🤝 COMBO · ' : ''}${esc(e.text)}</div>`).join('')}</div>`;
+      ${inFight && !busy ? `<div class="state${locked[seat] ? ' done' : ''}">${locked[seat] ? '✅ Locked in' : '🤔 Choosing…'}</div>` : ''}
+      ${inFight && !busy && h ? `<div class="hint"><b>${h.e}</b>${esc(h.t)}</div>` : ''}
+      ${inFight && pile ? `<div class="deckinfo">Deck ${r.decks[seat].length} cards · ${pile.draw.length} to draw · ${pile.discard.length} discarded</div>` : ''}
+      ${rv ? `<div class="label">${busy ? 'Revealed' : 'Last turn'}</div>` : ''}
+      <div class="played">${evs.map(e => cardHtml(e.card, { cls: e.combo ? 'combo' : '' }) + `<div class="ev">${e.combo ? '🤝 COMBO · ' : ''}${esc(e.text)}</div>`).join('')}</div>`;
   }
 
-  const e = r.enemy, info = e && ENEMIES[e.key];
-  $('enemy').innerHTML = e && (inFight || r.stage !== 'rest') ? `
-    <div class="intent" style="${inFight ? '' : 'visibility:hidden'}">${intentHtml(e)}</div>
-    <div class="ico">${info.icon}</div><h2>${esc(info.name)}</h2>
-    <div class="bar"><i style="width:${100 * e.hp / e.max}%"></i><b>${e.hp} / ${e.max}</b></div>
-    <div class="row">${e.block ? `<span class="pill blk">🛡️ ${e.block}</span>` : ''}${e.vuln ? `<span class="pill vuln">🎯 Vulnerable ${e.vuln}</span>` : ''}${e.weak ? `<span class="pill weak">🌀 Weak ${e.weak}</span>` : ''}${e.str ? `<span class="pill str">💪 ${e.str}</span>` : ''}</div>` : '';
-  $('party').innerHTML = `
-    <div class="lbl"><b>The party</b><span>${r.block ? `<span class="pill blk">🛡️ ${r.block}</span> ` : ''}${r.str ? `<span class="pill str">💪 ${r.str}</span> ` : ''}${r.relics.map(x => `<span class="pill" title="${esc(RELICS[x].text)}">${RELICS[x].icon} ${esc(RELICS[x].name)}</span>`).join(' ')}</span></div>
-    <div class="bar party"><i style="width:${100 * r.hp / r.maxHp}%"></i><b>${r.hp} / ${r.maxHp}</b></div>`;
+  const tip = tutorialTip(r, null);
+  $('tip').classList.toggle('hidden', !tip || busy);
+  $('tip').innerHTML = tip || '';
 
-  const enemyEv = S.reveal && (busy ? S.reveal.events.slice(0, shown) : S.reveal.events).filter(x => x.seat === 'enemy');
+  const step = busy ? 3 : !inFight ? 0 : SEATS.every(s => locked[s]) ? 3 : SEATS.some(s => locked[s]) ? 2 : 1;
+  $('steps').innerHTML = inFight ? [['1', 'Pick in secret'], ['2', 'Lock in'], ['3', 'Reveal']].map(([n, t], i) =>
+    `<span class="${step === i + 1 ? 'on' : step > i + 1 ? 'past' : ''}"><b>${n}</b> ${t}</span>`).join('<i>→</i>') +
+    `<span class="turnno">Turn ${r.turn} · floor ${r.floor + 1} of ${r.map.length}${S.quiet ? ' · 🤫 Quiet: hints only' : ' · 🗣️ Talk it through'}</span>` : '';
+
+  const e = r.enemy, info = e && ENEMIES[e.key];
+  $('enemy').innerHTML = e && inFight ? `
+    ${intentHtml(e, true)}
+    <div class="words">${esc(intentWords(e))}</div>
+    <div class="ico">${info.icon}</div><h2>${esc(info.name)}</h2>
+    <div class="about">${esc(info.about)}</div>
+    <div class="bar"><i style="width:${100 * e.hp / e.max}%"></i><b>${e.hp} / ${e.max}</b></div>
+    <div class="row">${statusPills(e)}</div>` : '';
+  $('party').innerHTML = `
+    <div class="lbl"><b>❤️ The party</b><span>${r.block ? `<span class="pill blk">🛡️ Block ${r.block}</span> ` : ''}${r.str ? `<span class="pill str">💪 Strength ${r.str}</span> ` : ''}</span></div>
+    <div class="bar party"><i style="width:${100 * r.hp / r.maxHp}%"></i><b>${r.hp} / ${r.maxHp}</b></div>
+    ${r.relics.length ? `<div class="row">${r.relics.map(x => `<span class="pill" title="${esc(RELICS[x].text)}">${RELICS[x].icon} ${esc(RELICS[x].name)}: <span style="font-weight:400">${esc(RELICS[x].text)}</span></span>`).join('')}</div>` : ''}`;
+
+  const enemyEv = S.reveal && inFight && (busy ? S.reveal.events.slice(0, shown) : S.reveal.events).filter(x => x.seat === 'enemy');
   $('log').innerHTML = (enemyEv || []).map(x => `<div>${esc(x.text)}</div>`).join('');
-  $('banner').innerHTML = busy ? '🃏 Reveal!' : r.stage === 'fight'
-    ? `Turn ${r.turn} · floor ${r.floor + 1} of ${MAP.length}. Pick your cards in secret.${S.quiet ? ' <b>Quiet:</b> hints only.' : ' Talk it through.'}`
-    : `Floor ${r.floor + 1} of ${MAP.length}`;
 
   renderStage(r);
   sendViews();
+}
+
+const votesFor = value => SEATS.filter(s => S.turn.got[s] === value).map(s => `${ROLES[s].icon} ${esc(nameOf(s))}`).join(' ');
+function summary(f) {
+  return `<div class="summary"><div><b>${f.turns}</b>turns</div><div><b>${f.combos}</b>combos 🤝</div><div><b>${f.dealt}</b>damage dealt</div><div><b>${f.taken}</b>HP lost</div></div>`;
+}
+function nodeBlurb(n) {
+  if (n.enemy) { const en = ENEMIES[n.enemy]; return `${en.icon} <b>${esc(en.name)}</b><br><span style="color:var(--ink-2)">${esc(en.about)}</span>${n.type === 'elite' ? '<br>Drops a relic.' : ''}`; }
+  if (n.type === 'rest') return 'Heal, or each of you upgrades a card.';
+  return 'Something unexpected: a choice to make together.';
 }
 
 function renderStage(r) {
@@ -219,38 +294,47 @@ function renderStage(r) {
   const voted = lockedIn(VOTE, S.turn), status = SEATS.map(s => `${ROLES[s].icon} ${esc(nameOf(s))}: ${voted[s] ? '✅ chosen' : '🤔 choosing'}`).join(' &nbsp; ');
   const clash = S.mismatch ? `<p style="color:var(--bad)">You picked different ones. Talk it over and choose together.</p>` : '';
   let h = '';
-  if (r.stage === 'reward') h = `<h2>Victory!</h2><p>Each of you picks a card for your own deck on your phone (or skips).</p><p>${status}</p>`;
-  else if (r.stage === 'relic') h = `<h2>A relic glints in the rubble</h2><p>Agree on one. Both choose the same on your phones.</p>
-      <div class="opts">${r.relicChoices.map(id => `<div class="opt"><div class="big">${RELICS[id].icon}</div><h3>${esc(RELICS[id].name)}</h3><div>${esc(RELICS[id].text)}</div></div>`).join('')}</div>${clash}<p>${status}</p>`;
-  else if (r.stage === 'rest') h = `<h2>🔥 A campfire</h2><p>Agree on one on your phones.</p><div class="opts">${Object.values(REST).map(t => `<div class="opt">${esc(t)}</div>`).join('')}</div>${clash}<p>${status}</p>`;
-  else if (r.stage === 'map') {
-    const next = MAP[r.floor + 1];
-    h = `<h2>Floor ${r.floor + 1} cleared</h2><p><b>Good stopping point.</b> The run is saved; close the tab whenever you like.</p>
-      <p>Next: ${NODE_ICON[next.type]} ${next.enemy ? esc(ENEMIES[next.enemy].name) : 'a campfire'}${next.type === 'elite' ? ' (elite: drops a relic)' : next.type === 'boss' ? ' (the boss)' : ''}</p>
-      <div class="opts"><button class="btn go" data-act="advance">Climb on</button></div>`;
-  } else if (r.stage === 'won') h = `<h2>🔔 You reached the top!</h2><p>${esc(r.why)}</p><p>Fill in the playtest rubric together.</p><div class="opts"><button class="btn go" data-act="newrun">New run</button></div>`;
-  else if (r.stage === 'lost') h = `<h2>💀 The climb ends</h2><p>${esc(r.why)} You made it to floor ${r.floor + 1}.</p><div class="opts"><button class="btn go" data-act="newrun">New run</button></div>`;
+  if (r.stage === 'reward') h = `<h2>Victory!</h2>${r.lastFight ? summary(r.lastFight) : ''}<p>Each of you picks a card for your <b>own</b> deck on your phone, or skips.</p><p>${status}</p>`;
+  else if (r.stage === 'upgrade') h = `<h2>🔥 Training</h2><p>Each of you picks one card in your deck to upgrade (bigger numbers).</p><p>${status}</p>`;
+  else if (r.stage === 'relic') h = `<h2>A relic glints in the rubble</h2><p>Agree on one: both choose the same on your phones.</p>
+      <div class="opts">${r.relicChoices.map(id => `<div class="opt"><div class="big">${RELICS[id].icon}</div><h3>${esc(RELICS[id].name)}</h3><div>${esc(RELICS[id].text)}</div><div class="votes">${votesFor(id)}</div></div>`).join('')}</div>${clash}<p>${status}</p>`;
+  else if (r.stage === 'rest') h = `<h2>🔥 A campfire</h2><p>Agree on one on your phones.</p><div class="opts">${Object.entries(REST).map(([k, t]) => `<div class="opt"><h3>${esc(t)}</h3><div class="votes">${votesFor(k)}</div></div>`).join('')}</div>${clash}<p>${status}</p>`;
+  else if (r.stage === 'event') {
+    const ev = EVENTS[r.event];
+    h = `<h2>${ev.icon} ${esc(ev.title)}</h2><p>${esc(ev.text)}</p><div class="opts">${ev.options.map(o => `<div class="opt"><h3>${esc(o.label)}</h3><div>${esc(o.desc)}</div><div class="votes">${votesFor(o.id)}</div></div>`).join('')}</div>${clash}<p>Agree on one on your phones. ${status}</p>`;
+  } else if (r.stage === 'map') {
+    const opts = nextOptions(r);
+    h = `<h2>Floor ${r.floor + 1} cleared</h2>${r.note ? `<p style="color:var(--ink)">${esc(r.note)}</p>` : ''}<p><b>Good stopping point.</b> The run is saved; close the tab whenever you like.</p>
+      ${opts.length > 1 ? `<p>The path splits. Choose together on your phones:</p>` : '<p>Next:</p>'}
+      <div class="opts">${opts.map((n, i) => `<div class="opt"><div class="big">${NODE[n.type].icon}</div><h3>${NODE[n.type].name}</h3><div>${nodeBlurb(n)}</div>${opts.length > 1 ? `<div class="votes">${votesFor(i)}</div>` : ''}</div>`).join('')}</div>
+      ${opts.length > 1 ? `${clash}<p>${status}</p>` : `<div class="opts"><button class="btn go" data-act="advance">Climb on</button></div>`}`;
+  } else if (r.stage === 'won') h = `<h2>🔔 You reached the top!</h2><p>${esc(r.why)}</p>${summary(r.stats)}<p><b>Ascension ${Math.min(MAX_ASC, r.asc + 1)} unlocked:</b> enemies are tougher next run.</p><p>Fill in the playtest rubric together.</p><div class="opts"><button class="btn go" data-act="newrun">New run</button></div>`;
+  else if (r.stage === 'lost') h = `<h2>💀 The climb ends</h2><p>${esc(r.why)} You made it to floor ${r.floor + 1} of ${r.map.length}.</p>${summary(r.stats)}<div class="opts"><button class="btn go" data-act="newrun">New run</button></div>`;
   const html = `<div class="panel">${h}</div>`;
   if (el.innerHTML !== html) el.innerHTML = html;
 }
 
-// What each phone may know: its own hand, never the partner's picks before the reveal.
+// What each phone may know: its own hand and both decks' contents (public), never the partner's picks or hand.
 function sendViews() {
   const r = S.run;
   for (const seat of SEATS) {
     const v = { seat, lobby: S.lobby, canStart: S.lobby && bothSeated(), started: !!r, quiet: S.quiet, busy, partner: nameOf(partnerOf(seat)) };
     if (r) {
-      const phases = r.stage === 'fight' ? PHASES : VOTE;
+      const phases = r.stage === 'fight' ? PHASES : VOTE, pile = r.piles?.[seat];
       Object.assign(v, {
-        stage: r.stage, floor: r.floor, floors: MAP.length, turn: r.turn, why: r.why,
-        hp: r.hp, maxHp: r.maxHp, block: r.block, str: r.str,
-        enemy: r.enemy && { name: ENEMIES[r.enemy.key].name, icon: ENEMIES[r.enemy.key].icon, hp: r.enemy.hp, max: r.enemy.max, block: r.enemy.block, vuln: r.enemy.vuln, weak: r.enemy.weak, intent: describeIntent(r.enemy) },
+        stage: r.stage, floor: r.floor, floors: r.map.length, turn: r.turn, why: r.why, asc: r.asc,
+        hp: r.hp, maxHp: r.maxHp, block: r.block, str: r.str, relics: r.relics,
+        enemy: r.enemy && { key: r.enemy.key, name: ENEMIES[r.enemy.key].name, icon: ENEMIES[r.enemy.key].icon, about: ENEMIES[r.enemy.key].about, hp: r.enemy.hp, max: r.enemy.max, block: r.enemy.block, vuln: r.enemy.vuln, weak: r.enemy.weak, poison: r.enemy.poison, str: r.enemy.str, i: r.enemy.i, words: intentWords(r.enemy) },
         locked: lockedIn(phases, S.turn), mine: S.turn.got[seat] ?? null, mismatch: !!S.mismatch,
-        energy: r.energy?.[seat], hand: r.stage === 'fight' ? r.piles[seat].hand : [],
+        energy: r.energy?.[seat], hand: r.stage === 'fight' ? pile.hand : [],
+        piles: pile && { draw: pile.draw.length, discard: pile.discard.length },
+        myDeck: r.decks[seat], partnerDeck: r.decks[partnerOf(seat)],
         myHint: r.hints?.[seat] || null, partnerHint: r.hints?.[partnerOf(seat)] || null,
         rewards: r.rewards?.[seat] || null, relicChoices: r.relicChoices,
+        event: r.stage === 'event' ? EVENTS[r.event] : null,
+        options: r.stage === 'map' ? nextOptions(r) : null, note: r.note,
+        lastFight: r.lastFight, stats: r.stats, tip: busy ? null : tutorialTip(r, seat),
         reveal: S.reveal && (busy ? { ...S.reveal, events: S.reveal.events.slice(0, shown) } : S.reveal),
-        nextFloor: r.stage === 'map' ? MAP[r.floor + 1] : null,
       });
     }
     room.send(seat, v);
@@ -258,13 +342,17 @@ function sendViews() {
 }
 
 document.body.addEventListener('click', e => {
+  const k = e.target.closest('.kw');
+  if (k) return showHelp(glossaryCard(k.dataset.kw));
   const act = e.target.closest('[data-act]')?.dataset.act;
+  if (act === 'help') return showHelp(HOW_TO_PLAY);
   if (act) onAction(null, { a: act });
 });
 $('mode').onclick = () => { S.quiet = !S.quiet; persist(); render(); };
 $('swap').onclick = () => { room.swap('warden', 'striker'); render(); };
 $('seats').onclick = () => { S.lobby = true; persist(); render(); };
-$('abandon').onclick = () => { if (!busy && confirmNew()) { S.reveal = null; setRun(newRun()); } };
+$('asc').onclick = () => { if (S.run && !['won', 'lost'].includes(S.run.stage)) return; S.asc = (S.asc + 1) % (meta.maxAsc + 1); persist(); render(); };
+$('abandon').onclick = () => { if (!busy && confirmNew()) freshRun(); };
 // a second press within 3 s confirms, so a stray tap does not throw the run away (no browser dialogs)
 let armed = 0;
 function confirmNew() {

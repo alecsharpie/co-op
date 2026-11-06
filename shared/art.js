@@ -84,6 +84,8 @@ export function burst(at, { count = 14, sprite = 'sparkle', spread = 120, size =
   }
 }
 
+// The shake is a transform animation, so it overrides an element's own transform while it runs: shake a wrapper
+// or a child, not something positioned with transform.
 export function shake(el, cls = 'fx-shake') {
   el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
   setTimeout(() => el.classList.remove(cls), 500);

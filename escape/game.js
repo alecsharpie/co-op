@@ -44,6 +44,7 @@ export function tryLock(room, st0, lockId, seat, value) {
   const v = tokens(value), st = structuredClone(st0), answer = lock.final ? lock.answer[seat] : lock.answer;
   const ok = same(v, answer);
   st.tries = (st.tries || 0) + 1;
+  if (!ok) st.misses = (st.misses || 0) + 1;
   if (lock.final) {
     if (ok) st.solved[lock.id] = { ...(st.solved[lock.id] || {}), [seat]: true };
     return { st, ok, opened: ok && isSolved(lock, st), close: ok ? null : closeness(v, answer) };
@@ -75,4 +76,17 @@ export function viewFor(room, st, seat) {
       partner: l.final ? !!(st.solved[l.id] && st.solved[l.id][SEATS.find(s => s !== seat)]) : null,
     })),
   };
+}
+
+// Stars for an escaped room, like Lighthouse's bays: escaping, never needing a give-away hint, and being sharp
+// (at most MISSES_FOR_STAR wrong tries). No clock: stars reward talking well, not speed.
+export const MISSES_FOR_STAR = 2;
+export const STAR_RULES = ['Escaped the room', 'No give-away hints', `${MISSES_FOR_STAR} wrong tries or fewer`];
+export function starsFor(room, st) {
+  const got = [
+    roomDone(room, st),
+    room.locks.every(l => (st.hints[l.id] || 0) < l.hints.length),
+    (st.misses || 0) <= MISSES_FOR_STAR,
+  ];
+  return { got, stars: got[0] ? got.filter(Boolean).length : 0 };
 }

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Split-Vision Escape: a padlock lit half by the sun, half by the moon -->
+  <circle cx="32" cy="32" r="30" fill="#1b2a48"/>
+  <path d="M32 2 A30 30 0 0 0 32 62 Z" fill="#ffcf5a" opacity=".25"/>
+  <path d="M20 30 V21 a12 12 0 0 1 24 0 V30" fill="none" stroke="#131a2c" stroke-width="9" stroke-linecap="round"/>
+  <path d="M20 30 V21 a12 12 0 0 1 24 0 V30" fill="none" stroke="#d6deea" stroke-width="4" stroke-linecap="round"/>
+  <rect x="11" y="28" width="42" height="28" rx="8" fill="#e8b94a" stroke="#131a2c" stroke-width="3"/>
+  <path d="M32 28 V56" stroke="#131a2c" stroke-width="2" stroke-dasharray="3 3" opacity=".5"/>
+  <circle cx="22" cy="40" r="5" fill="#ffd84a" stroke="#131a2c" stroke-width="2"/>
+  <path d="M45 35 a5.5 5.5 0 1 0 0 10 a4.5 4.5 0 1 1 0 -10z" fill="#bcd4ff" stroke="#131a2c" stroke-width="2"/>
+  <rect x="15" y="31" width="13" height="4" rx="2" fill="#fff" opacity=".35"/>
+</svg>

@@ -1,10 +1,14 @@
 // Draws clue cards and answer tokens as HTML strings, for the phones (cards) and the TV (tokens in the log).
-// Placeholder art: emoji and small inline SVGs. Anything with data-t can be tapped on a phone to tick it off while
-// reading it out (hand.html keeps the ticks).
+// Symbols are sprites from art.js, drawn with art(). Anything with data-t can be tapped on a phone to tick it off
+// while reading it out (hand.html keeps the ticks).
 import { COLORS, unmirror } from './rooms.js';
+import { art } from './art.js';
 
-export const DIR_ICON = { N: '⬆️', E: '➡️', S: '⬇️', W: '⬅️' };
 const DIR_WORD = { N: 'north', E: 'east', S: 'south', W: 'west' };
+
+const sym = (name, size = 44) => art(name, { size, label: name });
+export const dirIcon = (d, size = 30) => art('arrow-' + d.toLowerCase(), { size, label: DIR_WORD[d] });
+
 export const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 export function flagSvg(f) {
@@ -30,17 +34,16 @@ const swatch = (name, big) => `<span class="sw${big ? ' big' : ''}"><i style="ba
 // One answer token: a digit, an arrow, a colour or a letter.
 export function token(kind, t, big) {
   if (kind === 'colors') return swatch(t, big);
-  if (kind === 'dirs') return `<span class="tk">${DIR_ICON[t] || esc(t)}</span>`;
+  if (kind === 'dirs') return `<span class="tk">${DIR_WORD[t] ? dirIcon(t, big ? 40 : 26) : esc(t)}</span>`;
   return `<span class="tk">${esc(t)}</span>`;
 }
 
 
 const DAY = { Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday' };
-const ANIMAL = { '🦊': 'fox', '🦉': 'owl', '🐇': 'hare' };
 const notes = b => `<span class="notes">${[...b].map(n => `<i class="${n === 'L' ? 'long' : 'short'}"></i>`).join('')}</span>`;
-const side = o => Object.entries(o).map(([k, n]) => k.repeat(n)).join(' ');
+const side = o => Object.entries(o).map(([k, n]) => Array.from({ length: n }, () => sym(k, 40)).join('')).join('<i class="plus">+</i>');
 function clueText(k) {
-  const a = x => `${x} ${ANIMAL[x]}`;
+  const a = x => `${sym(x, 28)} <b>${esc(x)}</b>`;
   if (k.k === 'pos') return `The ${a(k.who)} hangs ${['on the left', 'in the middle', 'on the right'][k.at]}.`;
   if (k.k === 'frame') return `The ${a(k.who)} is in the <b>${esc(k.color)}</b> frame.`;
   if (k.k === 'notFrame') return `The ${a(k.who)} is <b>not</b> in the ${esc(k.color)} frame.`;
@@ -61,10 +64,10 @@ export function clockSvg(hour, mirrored = false, size = 180) {
 }
 
 const BODY = {
-  symbols: c => `<div class="row">${c.items.map((x, i) => `<span class="big-sym" data-t="${i}">${x}</span>`).join('')}</div>`,
-  legend: c => `<div class="pairs">${c.pairs.map(([a, b], i) => `<span data-t="${i}">${a}<b>${esc(b)}</b></span>`).join('')}</div>`,
+  symbols: c => `<div class="row">${c.items.map((x, i) => `<span class="big-sym" data-t="${i}">${sym(x, 50)}<small>${esc(x)}</small></span>`).join('')}</div>`,
+  legend: c => `<div class="pairs">${c.pairs.map(([a, b], i) => `<span data-t="${i}">${sym(a, 34)}<b>${esc(b)}</b></span>`).join('')}</div>`,
   flags: c => `<div class="row">${c.items.map((f, i) => `<span data-t="${i}">${flagSvg(f)}</span>`).join('')}</div>`,
-  flagbook: c => `<div class="book">${c.pairs.map(([f, d], i) => `<div data-t="${i}">${flagSvg(f)}<span>${DIR_ICON[d]} ${DIR_WORD[d]}</span></div>`).join('')}</div>`,
+  flagbook: c => `<div class="book">${c.pairs.map(([f, d], i) => `<div data-t="${i}">${flagSvg(f)}<span>${dirIcon(d, 22)} ${DIR_WORD[d]}</span></div>`).join('')}</div>`,
   valves: c => {
     const n = c.colors.length, w = 60 * n + 20;
     const valves = c.colors.map((col, i) => `<g transform="translate(${40 + i * 60} 40)"><rect x="-4" y="0" width="8" height="18" fill="#9aa4b5"/><circle r="17" fill="${COLORS[col]}" stroke="rgba(0,0,0,.4)" stroke-width="3"/><circle r="4" fill="rgba(0,0,0,.4)"/><text y="52" text-anchor="middle" fill="#9fb0cf" font-size="15" font-weight="700">${i + 1}</text></g>`).join('');
@@ -73,21 +76,21 @@ const BODY = {
   },
   rules: c => `<ol class="rules">${c.items.map((x, i) => `<li data-t="${i}">${esc(x)}</li>`).join('')}</ol>`,
   grid: c => `<table class="plan"><tr><th></th>${[...c.cols].map(x => `<th>${x}</th>`).join('')}</tr>${[...c.rows].map(r =>
-    `<tr><th>${r}</th>${[...c.cols].map(k => `<td>${c.cells[k + r] || ''}</td>`).join('')}</tr>`).join('')}</table><div class="compass">⬆️ north</div>`,
-  walk: c => `<div class="walk"><p>Start at the <span class="big-sym sm">${c.start}</span></p>${c.steps.map(([d, k], i) =>
-    `<p data-t="${i}">${DIR_ICON[d]} Walk ${k} square${k > 1 ? 's' : ''} ${DIR_WORD[d]}.</p>`).join('')}<p>⛏️ Dig there.</p></div>`,
+    `<tr><th>${r}</th>${[...c.cols].map(k => `<td>${c.cells[k + r] ? sym(c.cells[k + r], 36) : ''}</td>`).join('')}</tr>`).join('')}</table><div class="compass">${art('compass', { size: 22 })} north is up</div>`,
+  walk: c => `<div class="walk"><p>Start at the <span class="big-sym sm">${sym(c.start, 32)}</span> <b>${esc(c.start)}</b></p>${c.steps.map(([d, k], i) =>
+    `<p data-t="${i}">${dirIcon(d, 24)} Walk ${k} square${k > 1 ? 's' : ''} ${DIR_WORD[d]}.</p>`).join('')}<p>${art('spade', { size: 24 })} Dig there.</p></div>`,
   digitgrid: c => `<div class="dg">${c.rows.flatMap(r => [...r]).map((d, i) => `<span data-t="${i}">${d}</span>`).join('')}</div>`,
   stencil: c => `<div class="dg stencil">${Array.from({ length: 16 }, (_, i) => `<span class="${c.holes.some(([r, k]) => r * 4 + k === i) ? 'hole' : ''}"></span>`).join('')}</div>`,
   planets: c => `<div class="row planets">${c.items.map((p, i) => `<span data-t="${i}">${planetSvg(p)}</span>`).join('')}</div>`,
   almanac: c => `<div class="walk"><p><b>Nearest first:</b> ${c.order.map(esc).join(' → ')}</p>${c.guide.map((g, i) =>
-    `<p data-t="${i}">🪐 <b>${esc(g.name)}</b>: ${g.moons ? g.moons + ' moon' + (g.moons > 1 ? 's' : '') : 'no moons'}, ${g.rings ? 'rings' : 'no rings'}</p>`).join('')}</div>`,
+    `<p data-t="${i}">${art('planet', { size: 24 })} <b>${esc(g.name)}</b>: ${g.moons ? g.moons + ' moon' + (g.moons > 1 ? 's' : '') : 'no moons'}, ${g.rings ? 'rings' : 'no rings'}</p>`).join('')}</div>`,
   halfkey: c => `<div class="row key">${c.tokens.map((t, i) => `<span data-t="${i}">${token(c.kind, t, true)}</span>`).join('')}</div>`,
   coach: c => `<ol class="coach">${c.steps.map((x, i) => `<li data-t="${i}">${esc(x)}</li>`).join('')}</ol>`,
   rhythm: c => `<div class="bars">${c.bars.map((b, i) => `<div class="bar" data-t="${i}"><small>Bar ${i + 1}</small>${notes(b)}</div>`).join('')}</div>
     <div class="legend-notes">${notes('L')} long &nbsp; ${notes('S')} short</div>`,
   tunebook: c => `<div class="book">${c.pairs.map(([b, d], i) => `<div data-t="${i}">${notes(b)}<b class="num">${esc(d)}</b></div>`).join('')}</div>`,
-  drawer: c => `<div class="drawer">${c.items.map((x, i) => `<span data-t="${i}">${x}</span>`).join('')}</div>`,
-  order: c => `<p class="say">${esc(c.text)}</p><div class="row">${c.ask.map((x, i) => `<span class="big-sym ordinal" data-t="${i}"><small>${['1st', '2nd', '3rd', '4th'][i]}</small>${x}</span>`).join('')}</div>`,
+  drawer: c => `<div class="drawer">${c.items.map((x, i) => `<span data-t="${i}">${sym(x, 38)}</span>`).join('')}</div>`,
+  order: c => `<p class="say">${esc(c.text)}</p><div class="row">${c.ask.map((x, i) => `<span class="big-sym ordinal" data-t="${i}"><small>${['1st', '2nd', '3rd', '4th'][i]}</small>${sym(x, 40)}<small>${esc(x)}</small></span>`).join('')}</div>`,
   mirrorclock: c => `<div class="row">${clockSvg(unmirror(c.hand), true)}</div>`,
   shred: c => `<div class="shred">${c.rows[0].split(' ').map((_, d) => `<div class="glyph" data-t="${d}">${c.rows.map(r =>
     [...r.split(' ')[d]].map(px => `<i class="${px === '1' ? 'paint' : px === '0' ? 'bare' : 'torn'}"></i>`).join('')).join('')}</div>`).join('')}</div>
@@ -96,9 +99,9 @@ const BODY = {
   tides: c => `<table class="tides"><tr><th></th>${c.times.map(t => `<th>${esc(t)}</th>`).join('')}</tr>${c.days.map((d, r) =>
     `<tr><th>${esc(d)}</th>${c.heights[r].map((h, k) => `<td data-t="${r * 10 + k}">${h}</td>`).join('')}</tr>`).join('')}</table>`,
   ticket: c => `<div class="ticket"><div><small>Arrived</small><b>${esc(DAY[c.day] || c.day)}</b><b>${esc(c.time)}</b></div><p>${esc(c.rule)}</p></div>`,
-  scales: c => c.eqs.map((e, i) => `<div class="scale" data-t="${i}"><span>${side(e.left)}</span><span class="beam">⚖️</span><span>${side(e.right)}</span></div>`).join(''),
-  scalenote: c => `<div class="walk">${Object.entries(c.known).map(([k, w]) => `<p>One ${k} weighs <b>${w}</b>.</p>`).join('')}
-    <p>The vault asks: what do ${c.ask.join(' and ')} weigh <b>together</b>?</p></div>`,
+  scales: c => c.eqs.map((e, i) => `<div class="scale" data-t="${i}"><span>${side(e.left)}</span><span class="beam">${art('scale-beam', { size: 44 })}</span><span>${side(e.right)}</span></div>`).join(''),
+  scalenote: c => `<div class="walk">${Object.entries(c.known).map(([k, w]) => `<p>One ${sym(k, 32)} <b>${esc(k)}</b> weighs <b>${w}</b>.</p>`).join('')}
+    <p>The vault asks: what do ${c.ask.map(k => `${sym(k, 32)} <b>${esc(k)}</b>`).join(' and ')} weigh <b>together</b>?</p></div>`,
 };
 
 // A clue card on a phone, in its lock's colour. ticks: the set of `${key}:${t}` this phone has ticked off.
@@ -106,7 +109,7 @@ export function cardHtml(c, ticks = new Set()) {
   let body = c.solved ? '' : BODY[c.type](c);
   body = body.replace(/data-t="(\d+)"/g, (m, t) => `${m}${ticks.has(`${c.key}:${t}`) ? ' data-ticked="1"' : ''}`);
   return `<section class="clue${c.solved ? ' done' : ''}${c.type === 'halfkey' ? ' halfkey' : ''}${c.type === 'coach' ? ' coach-card' : ''}" style="--lc:${c.color}" data-key="${esc(c.key)}">
-    <div class="clue-h"><span class="ico">${c.icon}</span><b>${esc(c.title)}</b>${c.solved ? '<span class="open">🔓 open</span>' : ''}</div>
+    <div class="clue-h">${art('clue', { size: 26 })}<b>${esc(c.title)}</b>${c.solved ? `<span class="open">${art('unlock', { size: 18 })} open</span>` : ''}</div>
     <div class="cap">${esc(c.caption)}</div>
     ${body}
   </section>`;

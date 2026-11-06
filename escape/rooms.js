@@ -1,4 +1,4 @@
-// The rooms, easiest first, and the story that runs through them. Each lock gives each seat different clue cards;
+// The rooms, easiest first, each with a scene from art.js, and the story that runs through them. Each lock gives each seat different clue cards;
 // only together do they hold the answer. `solve` works the answer out from the cards alone and returns null if a
 // side is missing: test/escape.test.mjs checks it against `answer` with both sides, and with each side on its own.
 //
@@ -43,7 +43,8 @@ export function shredCandidates(cardsList) {
 }
 
 // The logic grid: three portraits in a row. Every arrangement of animals and frames that fits the clues.
-export const PORTRAITS = { animals: ['🦊', '🦉', '🐇'], frames: ['red', 'blue', 'green'] };
+// Symbols everywhere are sprite names from art.js ('fox', 'gear', 'pear'): what the players see and say.
+export const PORTRAITS = { animals: ['fox', 'owl', 'hare'], frames: ['red', 'blue', 'green'] };
 const perms = a => a.length <= 1 ? [a] : a.flatMap((x, i) => perms([...a.slice(0, i), ...a.slice(i + 1)]).map(p => [x, ...p]));
 export function logicSolutions(clues) {
   const out = [];
@@ -83,21 +84,21 @@ export const ROOMS = [
   {
     name: 'The Boathouse',
     tutorial: true,
-    scene: '🛶🪝🦆🐟🔦',
+    scene: 'boathouse',
     intro: 'A practice room. Each of you sees something different on your phone. Read your clue out loud: the answer needs both halves.',
     journal: 'Pinned to the boathouse wall: “Good. You talked. Keep doing that. Next, my cabin.” — W.',
     locks: [
       {
-        id: 'padlock', title: 'Boathouse padlock', icon: '🔒', input: { type: 'digits', len: 3 },
+        id: 'padlock', title: 'Boathouse padlock', icon: 'obj-padlock', input: { type: 'digits', len: 3 },
         answer: ['5', '3', '1'],
         cards: {
           sun: [
             { type: 'coach', title: 'How this works', caption: 'You see the animals painted on the padlock. Your partner has the key that turns them into numbers.', steps: ['Read the animals out loud, left to right.', 'Your partner tells you the number for each one.', 'Either of you taps the padlock below and enters the three numbers.'] },
-            { type: 'symbols', title: 'Painted on the padlock', caption: 'Three animals, left to right.', items: ['🐟', '🐢', '🦆'] },
+            { type: 'symbols', title: 'Painted on the padlock', caption: 'Three animals, left to right.', items: ['fish', 'turtle', 'duck'] },
           ],
           moon: [
             { type: 'coach', title: 'How this works', caption: 'You have the key. Your partner can see the animals painted on the padlock.', steps: ['Ask your partner which animals they see, in order.', 'Find each one on your key and say its number.', 'Either of you taps the padlock below and enters the three numbers.'] },
-            { type: 'legend', title: 'Key on a fishing float', caption: 'Each animal stands for a number.', pairs: [['🦆', '1'], ['🐸', '2'], ['🐢', '3'], ['🦢', '4'], ['🐟', '5'], ['🦀', '6'], ['🐌', '7'], ['🐳', '8']] },
+            { type: 'legend', title: 'Key on a fishing float', caption: 'Each animal stands for a number.', pairs: [['duck', '1'], ['frog', '2'], ['turtle', '3'], ['swan', '4'], ['fish', '5'], ['crab', '6'], ['snail', '7'], ['whale', '8']] },
           ],
         },
         solve: ({ sun, moon }) => {
@@ -113,7 +114,7 @@ export const ROOMS = [
         ],
       },
       {
-        id: 'shed', title: 'Boathouse door', icon: '🚪', final: true, input: { type: 'digits', len: 2 },
+        id: 'shed', title: 'Boathouse door', icon: 'obj-door', final: true, input: { type: 'digits', len: 2 },
         answer: { sun: ['2', '7'], moon: ['6', '4'] },
         cards: {
           sun: [{ type: 'halfkey', title: 'Scratched on an oar', caption: 'These numbers are for your partner to enter. Read them out.', tokens: ['6', '4'], kind: 'digits' }],
@@ -130,16 +131,16 @@ export const ROOMS = [
   },
   {
     name: "The Captain's Cabin",
-    scene: '⚓🗺️🕯️🧰🪟',
+    scene: 'cabin',
     intro: 'A storm slammed the cabin door behind you. Sun sees the cabin by the porthole’s daylight; Moon sees it by lantern light. Nothing looks the same to both of you.',
     journal: 'Captain’s log, torn page: “I keep my seeds where the frogs sing. The greenhouse will remember me.”',
     locks: [
       {
-        id: 'chest', title: 'Sea chest', icon: '🧰', input: { type: 'digits', len: 4 },
+        id: 'chest', title: 'Sea chest', icon: 'obj-chest', input: { type: 'digits', len: 4 },
         answer: ['4', '9', '2', '7'],
         cards: {
-          sun: [{ type: 'symbols', title: 'Carvings on the chest lid', caption: 'Four marks, carved left to right.', items: ['🐙', '⚓', '🦀', '🐚'] }],
-          moon: [{ type: 'legend', title: 'Logbook, last page', caption: 'The captain’s cipher.', pairs: [['🐚', '7'], ['🦀', '2'], ['🐟', '5'], ['⚓', '9'], ['🐙', '4'], ['🦑', '1'], ['🐬', '8'], ['⭐', '3']] }],
+          sun: [{ type: 'symbols', title: 'Carvings on the chest lid', caption: 'Four marks, carved left to right.', items: ['octopus', 'anchor', 'crab', 'shell'] }],
+          moon: [{ type: 'legend', title: 'Logbook, last page', caption: 'The captain’s cipher.', pairs: [['shell', '7'], ['crab', '2'], ['fish', '5'], ['anchor', '9'], ['octopus', '4'], ['squid', '1'], ['dolphin', '8'], ['starfish', '3']] }],
         },
         solve: ({ sun, moon }) => {
           const s = find(sun, 'symbols'), l = find(moon, 'legend');
@@ -154,7 +155,7 @@ export const ROOMS = [
         ],
       },
       {
-        id: 'wheel', title: 'Ship’s wheel', icon: '☸️', input: { type: 'dirs', len: 4 },
+        id: 'wheel', title: 'Ship’s wheel', icon: 'obj-wheel', input: { type: 'dirs', len: 4 },
         answer: ['N', 'E', 'W', 'S'],
         cards: {
           sun: [{ type: 'flags', title: 'Flags on the mast', caption: 'Flying left to right through the porthole.', items: [
@@ -186,7 +187,7 @@ export const ROOMS = [
         ],
       },
       {
-        id: 'door', title: 'Cabin door', icon: '🚪', final: true, input: { type: 'colors', len: 3, options: SIX },
+        id: 'door', title: 'Cabin door', icon: 'obj-door', final: true, input: { type: 'colors', len: 3, options: SIX },
         answer: { sun: ['blue', 'yellow', 'red'], moon: ['green', 'green', 'purple'] },
         cards: {
           sun: [{ type: 'halfkey', title: 'Half a key, from the chest', caption: 'This is for your partner to enter. Read it out.', tokens: ['green', 'green', 'purple'], kind: 'colors' }],
@@ -203,12 +204,12 @@ export const ROOMS = [
   },
   {
     name: 'The Overgrown Greenhouse',
-    scene: '🌿🪴🌵🐸🌻',
+    scene: 'greenhouse',
     intro: 'Vines have grown over the exit. Somewhere under the soil is the gate key, and the sprinklers are the only way to clear the vines.',
     journal: 'A seed packet, in Wren’s handwriting: “Clocks lie in mirrors. Ask the clockmaker.”',
     locks: [
       {
-        id: 'valves', title: 'Sprinkler valves', icon: '🚿', input: { type: 'pick', options: ['1', '2', '3', '4', '5'], label: 'Valve' },
+        id: 'valves', title: 'Sprinkler valves', icon: 'obj-valves', input: { type: 'pick', options: ['1', '2', '3', '4', '5'], label: 'Valve' },
         answer: ['4'],
         cards: {
           sun: [{ type: 'valves', title: 'The sprinkler pipe', caption: 'Five valves, numbered from the left, and a pressure gauge.', colors: ['blue', 'red', 'yellow', 'blue', 'white'], gauge: 6 }],
@@ -235,11 +236,11 @@ export const ROOMS = [
         ],
       },
       {
-        id: 'bed', title: 'Seed bed', icon: '🌱', input: { type: 'coord', cols: 'ABCDE', rows: '12345' },
+        id: 'bed', title: 'Seed bed', icon: 'obj-seedbed', input: { type: 'coord', cols: 'ABCDE', rows: '12345' },
         answer: ['C', '3'],
         cards: {
-          sun: [{ type: 'walk', title: 'Note tucked in a glove', caption: 'Dig where the walk ends.', start: '🐸', steps: [['E', 3], ['N', 2], ['W', 1]] }],
-          moon: [{ type: 'grid', title: 'Greenhouse floor plan', caption: 'Pinned by the door.', cols: 'ABCDE', rows: '12345', cells: { A1: '🌻', C2: '🌷', E1: '🐝', B4: '🌵', C4: '🌻', E4: '🍄', A5: '🐸', B2: '🍄', D5: '🌷' } }],
+          sun: [{ type: 'walk', title: 'Note tucked in a glove', caption: 'Dig where the walk ends.', start: 'frog', steps: [['E', 3], ['N', 2], ['W', 1]] }],
+          moon: [{ type: 'grid', title: 'Greenhouse floor plan', caption: 'Pinned by the door.', cols: 'ABCDE', rows: '12345', cells: { A1: 'sunflower', C2: 'tulip', E1: 'bee', B4: 'cactus', C4: 'sunflower', E4: 'mushroom', A5: 'frog', B2: 'mushroom', D5: 'tulip' } }],
         },
         solve: ({ sun, moon }) => {
           const w = find(sun, 'walk'), g = find(moon, 'grid');
@@ -257,7 +258,7 @@ export const ROOMS = [
         ],
       },
       {
-        id: 'gate', title: 'Greenhouse gate', icon: '🚧', final: true, input: { type: 'digits', len: 3 },
+        id: 'gate', title: 'Greenhouse gate', icon: 'obj-gate', final: true, input: { type: 'digits', len: 3 },
         answer: { sun: ['3', '8', '1'], moon: ['6', '0', '5'] },
         cards: {
           sun: [{ type: 'halfkey', title: 'Tag on a seed packet', caption: 'These are for your partner to enter. Read them out.', tokens: ['6', '0', '5'], kind: 'digits' }],
@@ -274,12 +275,12 @@ export const ROOMS = [
   },
   {
     name: 'The Clockmaker’s Workshop',
-    scene: '🕰️⚙️🎶🔩🪞',
+    scene: 'clockmaker',
     intro: 'A hundred clocks tick out of time. The music box is still playing Wren’s tune, and every mirror on the wall shows a different hour.',
     journal: 'Inside the music box: “The stars point the way. Find my telescope.”',
     locks: [
       {
-        id: 'musicbox', title: 'Music box', icon: '🎶', input: { type: 'digits', len: 4 },
+        id: 'musicbox', title: 'Music box', icon: 'obj-musicbox', input: { type: 'digits', len: 4 },
         answer: ['3', '8', '6', '7'],
         cards: {
           sun: [{ type: 'rhythm', title: 'The tune it plays', caption: 'Four bars of bells. Long notes and short notes. Hum them to your partner.', bars: ['LSS', 'SLS', 'LLL', 'SSL'] }],
@@ -298,11 +299,11 @@ export const ROOMS = [
         ],
       },
       {
-        id: 'drawer', title: 'Parts drawer', icon: '🗃️', input: { type: 'digits', len: 3 },
+        id: 'drawer', title: 'Parts drawer', icon: 'obj-drawer', input: { type: 'digits', len: 3 },
         answer: ['2', '4', '1'],
         cards: {
-          sun: [{ type: 'drawer', title: 'Inside the drawer', caption: 'A jumble of clock parts. Tap a part to tick it off as you count.', items: ['🔩', '🔑', '⚙️', '🔩', '🧲', '🔑', '🪛', '🔩', '🧲', '⚙️', '🔑', '🔩', '🧲'] }],
-          moon: [{ type: 'order', title: 'Repair ticket', caption: 'Stamped on the drawer front.', text: 'The code is how many of each part are in the drawer, in this order:', ask: ['⚙️', '🔩', '🪛'] }],
+          sun: [{ type: 'drawer', title: 'Inside the drawer', caption: 'A jumble of clock parts. Tap a part to tick it off as you count.', items: ['bolt', 'key', 'gear', 'bolt', 'magnet', 'key', 'screwdriver', 'bolt', 'magnet', 'gear', 'key', 'bolt', 'magnet'] }],
+          moon: [{ type: 'order', title: 'Repair ticket', caption: 'Stamped on the drawer front.', text: 'The code is how many of each part are in the drawer, in this order:', ask: ['gear', 'bolt', 'screwdriver'] }],
         },
         solve: ({ sun, moon }) => {
           const d = find(sun, 'drawer'), o = find(moon, 'order');
@@ -316,7 +317,7 @@ export const ROOMS = [
         ],
       },
       {
-        id: 'clocks', title: 'Twin clocks', icon: '🕰️', final: true, input: { type: 'clock' },
+        id: 'clocks', title: 'Twin clocks', icon: 'obj-clocks', final: true, input: { type: 'clock' },
         answer: { sun: ['8'], moon: ['10'] },
         cards: {
           sun: [{ type: 'mirrorclock', title: 'The mirror behind your partner', caption: 'This mirror shows your partner’s clock. Mirrors swap left and right.', hand: 2 }],
@@ -336,12 +337,12 @@ export const ROOMS = [
   },
   {
     name: 'The Observatory',
-    scene: '🔭🌌🪐✨🌙',
+    scene: 'observatory',
     intro: 'The dome is sealed for the night. Line up the telescope and the orrery, and the hatch will open to the stars.',
     journal: 'Under the telescope: “My portrait hangs in the gallery. It was torn in two, like my map.”',
     locks: [
       {
-        id: 'chart', title: 'Star chart safe', icon: '🗄️', input: { type: 'digits', len: 4 },
+        id: 'chart', title: 'Star chart safe', icon: 'obj-safe', input: { type: 'digits', len: 4 },
         answer: ['9', '8', '7', '4'],
         cards: {
           sun: [{ type: 'digitgrid', title: 'Numbers on the star chart', caption: 'Faint numbers printed across the sky.', rows: ['7294', '1836', '5027', '4961'] }],
@@ -359,7 +360,7 @@ export const ROOMS = [
         ],
       },
       {
-        id: 'orrery', title: 'Orrery', icon: '🪐', input: { type: 'colors', len: 4, options: SIX },
+        id: 'orrery', title: 'Orrery', icon: 'obj-orrery', input: { type: 'colors', len: 4, options: SIX },
         answer: ['purple', 'green', 'orange', 'blue'],
         cards: {
           sun: [{ type: 'planets', title: 'Through the telescope', caption: 'Four planets. Their names are not written anywhere you can see.', items: [
@@ -391,7 +392,7 @@ export const ROOMS = [
         ],
       },
       {
-        id: 'hatch', title: 'Dome hatch', icon: '🌠', final: true, input: { type: 'dirs', len: 4 },
+        id: 'hatch', title: 'Dome hatch', icon: 'obj-hatch', final: true, input: { type: 'dirs', len: 4 },
         answer: { sun: ['N', 'N', 'E', 'W'], moon: ['S', 'E', 'S', 'W'] },
         cards: {
           sun: [{ type: 'halfkey', title: 'Scratched inside the eyepiece', caption: 'These are for your partner to enter. Read them out.', tokens: ['S', 'E', 'S', 'W'], kind: 'dirs' }],
@@ -408,12 +409,12 @@ export const ROOMS = [
   },
   {
     name: 'The Portrait Gallery',
-    scene: '🖼️🦊🦉🐇🕯️',
+    scene: 'gallery',
     intro: 'Wren’s portrait was cut into strips and hung in pieces. The gallery guard left notes, but they never agree on where anything hangs.',
     journal: 'Behind the portrait, a brass plate: “The vault is under the harbour. Bring each other.”',
     locks: [
       {
-        id: 'painting', title: 'Shredded painting', icon: '🖼️', input: { type: 'digits', len: 3 },
+        id: 'painting', title: 'Shredded painting', icon: 'obj-painting', input: { type: 'digits', len: 3 },
         answer: ['0', '8', '5'],
         cards: {
           sun: [{ type: 'shred', title: 'Your strips of the painting', caption: 'Three numbers were painted on it. You have the outer strips of each; the gaps are your partner’s.', rows: shred('085', [0, 2]) }],
@@ -432,11 +433,11 @@ export const ROOMS = [
         ],
       },
       {
-        id: 'portraits', title: 'Portrait frames', icon: '🦉', input: { type: 'colors', len: 3, options: SIX },
+        id: 'portraits', title: 'Portrait frames', icon: 'obj-frames', input: { type: 'colors', len: 3, options: SIX },
         answer: ['green', 'red', 'blue'],
         cards: {
-          sun: [{ type: 'logic', title: 'Guard’s notes, page 1', caption: 'Three portraits hang in a row: a fox, an owl and a hare, in red, blue and green frames.', clues: [{ k: 'pos', who: '🦉', at: 1 }, { k: 'frame', who: '🦊', color: 'blue' }], ask: 'The lock wants the frame colours, left to right.' }],
-          moon: [{ type: 'logic', title: 'Guard’s notes, page 2', caption: 'Three portraits hang in a row: a fox, an owl and a hare, in red, blue and green frames.', clues: [{ k: 'leftOf', a: '🐇', b: '🦊' }, { k: 'notFrame', who: '🦉', color: 'green' }], ask: 'The lock wants the frame colours, left to right.' }],
+          sun: [{ type: 'logic', title: 'Guard’s notes, page 1', caption: 'Three portraits hang in a row: a fox, an owl and a hare, in red, blue and green frames.', clues: [{ k: 'pos', who: 'owl', at: 1 }, { k: 'frame', who: 'fox', color: 'blue' }], ask: 'The lock wants the frame colours, left to right.' }],
+          moon: [{ type: 'logic', title: 'Guard’s notes, page 2', caption: 'Three portraits hang in a row: a fox, an owl and a hare, in red, blue and green frames.', clues: [{ k: 'leftOf', a: 'hare', b: 'fox' }, { k: 'notFrame', who: 'owl', color: 'green' }], ask: 'The lock wants the frame colours, left to right.' }],
         },
         solve: ({ sun, moon }) => {
           const a = find(sun, 'logic'), b = find(moon, 'logic');
@@ -451,7 +452,7 @@ export const ROOMS = [
         ],
       },
       {
-        id: 'curtain', title: 'Velvet curtain', icon: '🎭', final: true, input: { type: 'dirs', len: 4 },
+        id: 'curtain', title: 'Velvet curtain', icon: 'obj-curtain', final: true, input: { type: 'dirs', len: 4 },
         answer: { sun: ['E', 'S', 'S', 'N'], moon: ['W', 'W', 'N', 'E'] },
         cards: {
           sun: [{ type: 'halfkey', title: 'Arrows on the frame', caption: 'These are for your partner to enter. Read them out.', tokens: ['W', 'W', 'N', 'E'], kind: 'dirs' }],
@@ -469,12 +470,12 @@ export const ROOMS = [
   {
     name: 'The Vault Under the Harbour',
     finale: true,
-    scene: '⚓🌊🗝️⚖️💌',
+    scene: 'vault',
     intro: 'The last door of the trail. The tide is coming in, the scales are waiting, and Wren’s vault has two keyholes side by side.',
     journal: 'Inside the vault there is no gold. Just a letter: “If you are reading this, you got here together. That was always the treasure. Keep talking to each other.” — Captain Wren',
     locks: [
       {
-        id: 'tides', title: 'Tide gate', icon: '🌊', input: { type: 'digits', len: 2 },
+        id: 'tides', title: 'Tide gate', icon: 'obj-tidegate', input: { type: 'digits', len: 2 },
         answer: ['7', '2'],
         cards: {
           sun: [{ type: 'tides', title: 'Harbour tide table', caption: 'Tide heights in metres.', days: ['Mon', 'Tue', 'Wed', 'Thu'], times: ['6am', 'noon', '6pm', 'midnight'], heights: [[3, 5, 2, 4], [4, 6, 1, 3], [2, 7, 3, 5], [5, 4, 2, 6]] }],
@@ -493,11 +494,11 @@ export const ROOMS = [
         ],
       },
       {
-        id: 'scales', title: 'Brass scales', icon: '⚖️', input: { type: 'digits', len: 2 },
+        id: 'scales', title: 'Brass scales', icon: 'obj-scales', input: { type: 'digits', len: 2 },
         answer: ['1', '0'],
         cards: {
-          sun: [{ type: 'scales', title: 'Two balanced scales', caption: 'Both are perfectly level.', eqs: [{ left: { '🍐': 1 }, right: { '🍎': 2 } }, { left: { '🍋': 1 }, right: { '🍐': 1, '🍎': 1 } }] }],
-          moon: [{ type: 'scalenote', title: 'Label on the vault scale', caption: 'Engraved in brass.', known: { '🍎': 2 }, ask: ['🍋', '🍐'] }],
+          sun: [{ type: 'scales', title: 'Two balanced scales', caption: 'Both are perfectly level.', eqs: [{ left: { 'pear': 1 }, right: { 'apple': 2 } }, { left: { 'lemon': 1 }, right: { 'pear': 1, 'apple': 1 } }] }],
+          moon: [{ type: 'scalenote', title: 'Label on the vault scale', caption: 'Engraved in brass.', known: { 'apple': 2 }, ask: ['lemon', 'pear'] }],
         },
         solve: ({ sun, moon }) => {
           const a = find(sun, 'scales'), b = find(moon, 'scalenote');
@@ -512,7 +513,7 @@ export const ROOMS = [
         ],
       },
       {
-        id: 'vault', title: 'Vault door', icon: '🗝️', final: true, input: { type: 'digits', len: 4 },
+        id: 'vault', title: 'Vault door', icon: 'obj-vault', final: true, input: { type: 'digits', len: 4 },
         answer: { sun: ['1', '9', '0', '4'], moon: ['2', '0', '2', '6'] },
         cards: {
           sun: [{ type: 'halfkey', title: 'Engraved on the left key', caption: 'These are for your partner to enter. Read them out.', tokens: ['2', '0', '2', '6'], kind: 'digits' }],

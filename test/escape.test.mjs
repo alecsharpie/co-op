@@ -2,7 +2,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ROOMS, COLORS, STORY, shredCandidates, logicSolutions, weigh, unmirror } from '../escape/rooms.js';
-import { newRoom, tryLock, hint, viewFor, roomDone, visible, SEATS, lockColor, formatText, closeness } from '../escape/game.js';
+import { newRoom, tryLock, hint, viewFor, roomDone, visible, SEATS, lockColor, formatText, closeness, starsFor } from '../escape/game.js';
+import { SPRITES, SCENES } from '../escape/art.js';
 
 const ordinary = ROOMS.flatMap(r => r.locks.filter(l => !l.final).map(l => [r, l]));
 const finals = ROOMS.flatMap(r => r.locks.filter(l => l.final).map(l => [r, l]));
@@ -44,7 +45,7 @@ test('the new puzzles are ambiguous for each phone on its own', () => {
   for (const s of SEATS) assert.ok(logicSolutions(portraits.cards[s][0].clues).length > 1, `portraits: ${s}'s notes alone settle it`);
 
   const [, scales] = lockById('scales');
-  assert.equal(weigh(scales.cards.sun[0].eqs, {})['🍐'], undefined, 'scales: weights known without the apple');
+  assert.equal(weigh(scales.cards.sun[0].eqs, {}).pear, undefined, 'scales: weights known without the apple');
 
   assert.equal(unmirror(2), 10); assert.equal(unmirror(6), 6); assert.equal(unmirror(12), 12);
 });
@@ -117,4 +118,44 @@ test('views never carry answers or solvers; cards wear their lock’s colour; hi
   let st = newRoom();
   for (let i = 0; i < 9; i++) st = hint(r, st, 'chest');
   assert.equal(st.hints.chest, r.locks[0].hints.length);
+});
+
+test('stars: escape, no give-away, few wrong tries', () => {
+  const [r] = lockById('chest'), door = r.locks.find(l => l.final);
+  const play = (misses, giveaway) => {
+    let st = newRoom();
+    for (let i = 0; i < misses; i++) st = tryLock(r, st, 'chest', 'sun', ['0', '0', '0', '0']).st;
+    if (giveaway) for (let i = 0; i < 3; i++) st = hint(r, st, 'wheel');
+    st = tryLock(r, st, 'chest', 'sun', ['4', '9', '2', '7']).st;
+    st = tryLock(r, st, 'wheel', 'sun', ['N', 'E', 'W', 'S']).st;
+    for (const s of SEATS) st = tryLock(r, st, 'door', s, door.answer[s]).st;
+    return starsFor(r, st).stars;
+  };
+  assert.equal(play(0, false), 3); assert.equal(play(3, false), 2); assert.equal(play(0, true), 2); assert.equal(play(5, true), 1);
+  assert.equal(starsFor(r, newRoom()).stars, 0);
+});
+
+test('every symbol, lock and scene the rooms use has artwork', () => {
+  const names = new Set();
+  const walk = v => { if (typeof v === 'string') names.add(v); else if (v && typeof v === 'object') Object.entries(v).forEach(([k, x]) => { names.add(k); walk(x); }); };
+  for (const r of ROOMS) {
+    assert.ok(SCENES[r.scene], `${r.name}: no scene "${r.scene}"`);
+    for (const l of r.locks) {
+      assert.ok(SPRITES[l.icon], `${l.id}: no sprite "${l.icon}"`);
+      assert.ok(SCENES[r.scene].spots[l.id], `${l.id}: no spot in scene ${r.scene}`);
+    }
+  }
+  const symbolCards = ROOMS.flatMap(r => r.locks.flatMap(l => [...l.cards.sun, ...l.cards.moon]));
+  const used = new Set();
+  for (const c of symbolCards) {
+    if (c.type === 'symbols' || c.type === 'drawer') c.items.forEach(x => used.add(x));
+    if (c.type === 'legend') c.pairs.forEach(([x]) => used.add(x));
+    if (c.type === 'order') c.ask.forEach(x => used.add(x));
+    if (c.type === 'grid') Object.values(c.cells).forEach(x => used.add(x));
+    if (c.type === 'walk') used.add(c.start);
+    if (c.type === 'logic') c.clues.forEach(k => [k.who, k.a, k.b].filter(Boolean).forEach(x => used.add(x)));
+    if (c.type === 'scales') c.eqs.forEach(e => [...Object.keys(e.left), ...Object.keys(e.right)].forEach(x => used.add(x)));
+    if (c.type === 'scalenote') [...Object.keys(c.known), ...c.ask].forEach(x => used.add(x));
+  }
+  for (const x of used) assert.ok(SPRITES[x], `symbol "${x}" has no sprite`);
 });

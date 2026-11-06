@@ -71,6 +71,7 @@
   .opt.up { flex-direction: row; align-items: center; gap: 12px; } .opt.up > span { display: flex; flex-direction: column; gap: 3px; }
   .guidebox { display: block; } .guidebox > svg.art { vertical-align: -6px; margin-right: 2px; }
   .secret .lab, .say, .label { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .secret .label { width: 100%; flex-wrap: nowrap; } .secret .label svg.art { align-self: flex-start; margin-top: 1px; }
   .yday { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin: 4px 0; font-weight: 700; color: var(--ink); }
   .yday span { display: inline-flex; align-items: center; gap: 3px; }
   .stamp-sm { padding: 2px 10px; border: 3px solid var(--good); border-radius: 10px; color: var(--good); font-family: var(--font-display); transform: rotate(-4deg); }
@@ -232,7 +233,7 @@ function planner() {
     : locked() ? `Locked in. ${V.locked[partner] ? 'Revealing…' : 'Waiting for your partner…'}<small>You can still change your plan until you are both ready.</small>`
     : `Tap a station to choose what to do there. You have ${TOKENS} tokens a day.<small>${V.locked[partner] ? '<b>Your partner is ready.</b>' : 'Your partner is planning too. Talk it through!'}</small>`}</div>`;
   if (V.forecast) h += `<div class="secret"><span class="lab">${A('eye', 18)} Only you can see: the weather</span>${V.forecast.map((f, i) =>
-    `<span class="wx${f.w === 'storm' ? ' storm' : ''}">${A(f.w, 40)}${f.w}<br>${i === 0 ? 'today' : i === 1 ? 'tomorrow' : 'day ' + f.day}</span>`).join('')}<span class="label">${A('rain', 18)} rain waters every bed${d.storm?.length ? ` · ${A('storm', 18)} a storm flattens growing crops unless you cover them` : ''}</span><span class="say">${A('speech', 18)} Say it out loud: the cook can't see this.</span></div>`;
+    `<span class="wx${f.w === 'storm' ? ' storm' : ''}">${A(f.w, 40)}${f.w}<br>${i === 0 ? 'today' : i === 1 ? 'tomorrow' : 'day ' + f.day}</span>`).join('')}<span class="label">${A('rain', 18)} rain waters every bed</span>${d.storm?.length ? `<span class="label">${A('storm', 18)} a storm waters nothing and flattens growing crops unless you cover them</span>` : ''}<span class="say">${A('speech', 18)} Say it out loud: the cook can't see this.</span></div>`;
   if (V.upcoming) h += `<div class="secret"><span class="lab">${A('eye', 18)} Only you can see: who is coming</span>${V.upcoming.length
     ? V.upcoming.map(o => `<span class="when">Day ${o.day}:</span>${ticket({ ...o, due: o.day + o.within - 1 }, o.day, { size: 40 })}`).join('') : '<span class="label">Nobody new in the next two days.</span>'}<span class="say">${A('speech', 18)} Say it out loud: the grower can't see this.</span></div>`;
   h += recipeBook(d, { compact: true });
@@ -343,6 +344,10 @@ function flash(text) {
   const m = $app.querySelector('.msg'); if (!m) return;
   m.innerHTML = esc(text); clearTimeout(flashTimer); flashTimer = setTimeout(render, 1800);
 }
+
+// closing a help card shows the next one straight away (the role card, then what is new this season), instead of
+// waiting for the next redraw, which would pop it up over the action picker mid-tap
+document.addEventListener('click', e => { if (e.target.closest('.help-ok') || e.target.classList.contains('help-wrap')) setTimeout(render, 0); });
 
 $app.addEventListener('click', e => {
   if (quiet) return;

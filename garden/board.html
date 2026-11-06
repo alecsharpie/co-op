@@ -68,11 +68,17 @@
   .walker .tag-name { position: absolute; left: 50%; bottom: -10px; transform: translateX(-50%); padding: 1px 8px; border-radius: 999px; color: #fff; font-size: 12px; font-weight: 800; white-space: nowrap; }
   .walker.grower .tag-name { background: var(--grower); } .walker.cook .tag-name { background: var(--cook); }
   .flyer { position: fixed; z-index: 60; pointer-events: none; transition: transform .75s cubic-bezier(.5, -0.3, .4, 1.2), opacity .2s; }
-  .weather { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 3; border-radius: 18px; }
-  .weather .rd { position: absolute; top: -30px; animation: fall linear infinite; opacity: .8; }
-  @keyframes fall { to { transform: translateY(110vh) } }
-  .weather.storm { background: rgba(40, 46, 70, .18); animation: flash 2.2s steps(1) infinite; }
-  @keyframes flash { 0%, 100% { background: rgba(40, 46, 70, .18) } 47% { background: rgba(255, 255, 240, .55) } 50% { background: rgba(40, 46, 70, .18) } 53% { background: rgba(255, 255, 240, .4) } }
+  /* over the beds only (below the heading); rain falls, a storm blows and flashes but waters nothing */
+  .weather { position: absolute; inset: 54px -6px -6px; overflow: hidden; pointer-events: none; z-index: 3; border-radius: 20px; }
+  .weather.rain { background: rgba(90, 166, 255, .1); }
+  .weather .rd { position: absolute; top: -30px; animation: fall linear infinite; opacity: .85; }
+  @keyframes fall { to { transform: translateY(340px) } }
+  .weather.storm { background: rgba(40, 46, 70, .2); animation: flash 2.4s steps(1) infinite; }
+  @keyframes flash { 0%, 100% { background: rgba(40, 46, 70, .2) } 46% { background: rgba(255, 255, 235, .6) } 49% { background: rgba(40, 46, 70, .2) } 52% { background: rgba(255, 255, 235, .45) } }
+  .weather .gust { position: absolute; left: -30%; height: 4px; border-radius: 4px; background: rgba(255, 255, 255, .75); animation: gust linear infinite; }
+  @keyframes gust { from { transform: translateX(0) } to { transform: translateX(160vw) } }
+  .weather .leafy { position: absolute; left: -60px; animation: blow linear infinite; }
+  @keyframes blow { 0% { transform: translate(0, 0) rotate(0) } 50% { transform: translate(70vw, 30px) rotate(360deg) } 100% { transform: translate(140vw, -10px) rotate(720deg) } }
   .tally { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: rgba(59, 46, 33, .35); animation: fade .3s; }
   @keyframes fade { from { opacity: 0 } }
   .tally .box { min-width: 440px; padding: 28px 34px; border-radius: 26px; background: var(--bg-2); border: 3px solid var(--accent); text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.25); animation: pop .45s cubic-bezier(.3, 1.6, .5, 1); }
@@ -259,8 +265,12 @@ function fly(sprite, from, to, size = 46) {
 
 function weather(kind) {
   const w = $('weather');
-  w.classList.toggle('hidden', !kind); w.classList.toggle('storm', kind === 'storm');
-  w.innerHTML = kind ? Array.from({ length: 46 }, () => `<span class="rd" style="left:${Math.random() * 100}%;animation-duration:${.55 + Math.random() * .5}s;animation-delay:${-Math.random()}s">${art('raindrop', { size: 22 })}</span>`).join('') : '';
+  w.classList.toggle('hidden', !kind); w.classList.toggle('storm', kind === 'storm'); w.classList.toggle('rain', kind === 'rain');
+  const r = Math.random;
+  w.innerHTML = kind === 'rain' ? Array.from({ length: 80 }, () => `<span class="rd" style="left:${r() * 100}%;animation-duration:${.5 + r() * .4}s;animation-delay:${-r()}s">${art('raindrop', { size: 18 + r() * 10 })}</span>`).join('')
+    : kind === 'storm' ? Array.from({ length: 16 }, () => `<span class="gust" style="top:${r() * 100}%;width:${60 + r() * 140}px;animation-duration:${.5 + r() * .5}s;animation-delay:${-r()}s"></span>`).join('')
+      + Array.from({ length: 6 }, () => `<span class="leafy" style="top:${r() * 85}%;animation-duration:${1.6 + r()}s;animation-delay:${-r() * 2}s">${art('wilted', { size: 26 })}</span>`).join('')
+    : '';
 }
 
 async function playDay(plans) {

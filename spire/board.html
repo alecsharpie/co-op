@@ -8,50 +8,50 @@
 <link rel="stylesheet" href="spire.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <style>
-  body { display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
+  body { display: grid; grid-template-rows: auto 1fr; overflow: hidden; background: radial-gradient(ellipse at 50% 30%, #1a2a4a 0%, var(--bg) 70%); }
   header { display: flex; align-items: center; gap: 14px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--bg-2); }
-  header h1 { margin: 0; font-size: 22px; white-space: nowrap; }
+  header h1 { margin: 0; font-size: 24px; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
   header .sp { flex: 1; }
-  main { display: grid; grid-template-columns: 300px 1fr 300px; gap: 18px; padding: 16px 20px 64px; min-height: 0; }
+  main { display: grid; grid-template-columns: 300px 1fr 300px; gap: 18px; padding: 14px 20px 64px; min-height: 0; }
   .player { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 18px; background: var(--bg-2); border: 1px solid var(--line); min-height: 0; }
-  .player h2 { margin: 0; font-size: 22px; }
-  .player .state { font-size: 22px; font-weight: 700; padding: 10px 12px; border-radius: 12px; background: var(--panel); text-align: center; }
+  .player.warden { border-top: 4px solid var(--sp-warden); }
+  .player.striker { border-top: 4px solid var(--sp-striker); }
+  .player h2 { margin: 0; font-size: 22px; display: flex; align-items: center; gap: 10px; }
+  .player .state { font-size: 21px; font-weight: 700; padding: 10px 12px; border-radius: 12px; background: var(--panel); text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px; }
   .player .state.done { color: var(--good); }
-  .player .hint { text-align: center; padding: 8px; border-radius: 12px; border: 2px dashed var(--line); }
-  .player .hint b { display: block; font-size: 44px; line-height: 1.1; }
+  .player .hint { text-align: center; padding: 8px; border-radius: 12px; border: 2px dashed var(--accent); display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 700; }
   .player .deckinfo { color: var(--ink-2); font-size: 14px; }
-  .player .played { display: flex; flex-direction: column; gap: 8px; overflow: auto; }
+  .player .played { display: flex; flex-direction: column; gap: 8px; overflow: auto; padding: 4px; }
   .player .played .card { min-height: 0; cursor: default; }
   .player .played .ev { font-size: 15px; font-weight: 700; color: var(--ink); margin-top: -2px; }
-  .middle { display: flex; flex-direction: column; gap: 14px; align-items: center; min-height: 0; overflow: auto; }
-  .enemy { text-align: center; width: 100%; max-width: 600px; }
-  .enemy .ico { font-size: 120px; line-height: 1.05; transition: transform .2s; }
-  .enemy .ico.hurt { transform: scale(.9) rotate(-6deg); filter: brightness(1.6); }
-  .enemy h2 { margin: 2px 0 2px; font-size: 30px; }
+  .middle { display: flex; flex-direction: column; gap: 12px; align-items: center; min-height: 0; overflow: auto; padding-bottom: 8px; }
+  .enemy { text-align: center; width: 100%; max-width: 620px; position: relative; }
+  .enemy h2 { margin: 0; font-size: 32px; }
   .enemy .about { color: var(--ink-2); font-size: 16px; margin-bottom: 10px; }
-  .enemy .words { font-size: 20px; font-weight: 700; margin: 8px 0 12px; color: #ffd0c8; }
+  .enemy .words { font-size: 20px; font-weight: 700; margin: 8px 0 4px; color: #ffd0c8; }
   .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
-  .party { width: 100%; max-width: 600px; padding: 14px 16px; border-radius: 18px; background: var(--bg-2); border: 1px solid var(--line); }
-  .party .lbl { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 18px; flex-wrap: wrap; }
-  .log { color: var(--ink-2); font-size: 16px; line-height: 1.5; text-align: center; max-width: 600px; }
+  .party { width: 100%; max-width: 620px; padding: 14px 16px; border-radius: 18px; background: var(--bg-2); border: 1px solid var(--line); position: relative; }
+  .party .lbl { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 18px; flex-wrap: wrap; }
+  .party .who { display: flex; align-items: center; gap: 6px; font-family: var(--font-display); font-size: 20px; }
   .overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(5, 10, 20, .86); z-index: 10; padding: 24px; overflow: auto; }
   .panel { max-width: 980px; text-align: center; padding: 30px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 24px; }
-  .panel h2 { font-size: 38px; margin: 0 0 8px; }
+  .panel h2 { font-size: 40px; margin: 0 0 8px; display: flex; align-items: center; justify-content: center; gap: 12px; }
   .panel p { font-size: 20px; color: var(--ink-2); margin: 8px 0; }
   .panel .opts { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin: 18px 0; }
   .panel .opt { width: 260px; padding: 18px; border-radius: 18px; background: var(--panel); border: 2px solid var(--line); text-align: left; }
-  .panel .opt .big { font-size: 54px; text-align: center; }
+  .panel .opt .big { text-align: center; }
   .panel .opt h3 { margin: 6px 0; }
-  .panel .opt .votes { margin-top: 10px; font-size: 15px; color: var(--accent); min-height: 20px; }
+  .panel .opt .votes { margin-top: 10px; font-size: 15px; color: var(--accent); min-height: 24px; display: flex; gap: 6px; align-items: center; }
   .summary { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 12px 0; }
-  .summary div { padding: 10px 16px; border-radius: 14px; background: var(--panel); font-size: 18px; }
-  .summary b { display: block; font-size: 28px; }
+  .summary div { padding: 10px 16px; border-radius: 14px; background: var(--panel); font-size: 18px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .summary b { display: block; font-size: 28px; font-family: var(--font-display); }
   .settings { position: fixed; right: 16px; bottom: 12px; display: flex; gap: 8px; z-index: 5; }
+  .settings .btn { display: inline-flex; align-items: center; gap: 6px; }
 </style>
 </head>
 <body>
 <header>
-  <h1>🃏 Co-op Spire</h1>
+  <h1><span id="logo"></span> Co-op Spire</h1>
   <div class="minimap" id="map"></div>
   <span class="sp"></span>
   <span class="chip" id="asc"></span>
@@ -60,18 +60,18 @@
   <button class="help-btn" data-act="help" aria-label="How to play">?</button>
 </header>
 <main>
-  <div class="player" id="p-warden"></div>
+  <div class="player warden" id="p-warden"></div>
   <div class="middle">
     <div class="steps" id="steps"></div>
     <div class="tipbar hidden" id="tip"></div>
     <div class="enemy" id="enemy"></div>
     <div class="party" id="party"></div>
-    <div class="log" id="log"></div>
+    <div class="narrate" id="narrate"></div>
   </div>
-  <div class="player" id="p-striker"></div>
+  <div class="player striker" id="p-striker"></div>
 </main>
-<div class="narrate hidden" id="narrate"></div>
 <div class="settings">
+  <button class="btn sm" id="mute"></button>
   <button class="btn sm" id="mode"></button>
   <button class="btn sm" id="swap">Swap roles</button>
   <button class="btn sm" data-act="help">How to play</button>
@@ -80,18 +80,25 @@
 </div>
 <div class="overlay hidden" id="lobby"></div>
 <div class="overlay hidden" id="stage"></div>
+<div class="moment hidden" id="moment"></div>
 
 <script type="module">
 import { hostRoom, load, save } from '../shared/net.js';
 import { renderLobby, findLan } from '../shared/lobby.js';
 import { showHelp, helpOnce } from '../shared/help.js';
+import { art, burst, shake, popText } from '../shared/art.js';
+import { sfx, isMuted, setMuted } from '../shared/sfx.js';
 import { newTurn, submit, withdraw, lockedIn } from '../shared/phases.js';
-import { SEATS, PHASES, VOTE, MAX_ASC, partnerOf, newRun, resolve, validPick, describeIntent, intentWords, chooseReward, chooseRelic, chooseUpgrade, chooseEvent, rest, advance, hint, REST, nodeOf, nextOptions, isTutorial } from './game.js';
-import { card, canUpgrade, ENEMIES, RELICS, EVENTS, HINTS, TAGS } from './cards.js';
-import { esc, ROLES, NODE, cardHtml, intentHtml, statusPills, glossaryCard, HOW_TO_PLAY } from './ui.js';
+import { SEATS, PHASES, VOTE, MAX_ASC, SYNC, partnerOf, newRun, resolve, validPick, describeIntent, intentWords, chooseReward, chooseRelic, chooseUpgrade, chooseEvent, rest, advance, hint, REST, nodeOf, nextOptions, isTutorial } from './game.js';
+import { card, canUpgrade, ENEMIES, RELICS, EVENTS, HINTS } from './cards.js';
+import './art.js';
+import { esc, ROLES, roleIcon, NODE, nodeIcon, enemyArt, ENEMY_ANIM, cardHtml, intentHtml, statusPills, partyPills, syncMeter, linkIcon, hintIcon, glossaryCard, HOW_TO_PLAY } from './ui.js';
 
 const $ = id => document.getElementById(id);
-const room = hostRoom({ game: 'spire', seats: SEATS, onSeats: render, onAction, onStatus });
+$('logo').innerHTML = art('spire', { size: 30 });
+// seat news can arrive while this script is still starting up; it waits until everything below exists
+let ready = false;
+const room = hostRoom({ game: 'spire', seats: SEATS, onSeats: () => ready && render(), onAction: (s, a) => ready && onAction(s, a), onStatus });
 const KEY = `coop-spire-${room.room}`;
 // across runs on this board: the highest Ascension unlocked, and whether the training fight has been played
 const meta = load('coop-spire-meta') || { maxAsc: 0, wins: 0, runs: 0, tutorialDone: false };
@@ -101,7 +108,9 @@ let S = load(KEY);
 if (!S || S.run?.v !== 2 && S.run) S = null;
 S = S || { lobby: true, run: null, turn: newTurn(), reveal: null, mismatch: null, quiet: false, asc: meta.maxAsc };
 let busy = false, shown = 0; // revealing the cards one event at a time
+let lastStage = S.run?.stage || null;
 const persist = () => { if (!busy) save(KEY, S); };
+const isPlayer = ev => SEATS.includes(ev.seat);
 
 $('room').textContent = 'Room ' + room.room;
 await findLan();
@@ -134,12 +143,13 @@ function onAction(seat, a) {
   if (!seat) return;
 
   if (r.stage === 'fight') {
-    if (a.a === 'hint' && HINTS.some(h => h.e === a.emoji) && !r.hints[seat] && !(seat in S.turn.got)) { S.run = hint(r, seat, a.emoji); persist(); return render(); }
+    if (a.a === 'hint' && HINTS.some(h => h.id === a.id) && !r.hints[seat] && !(seat in S.turn.got)) { S.run = hint(r, seat, a.id); sfx.tick(); persist(); return render(); }
     if (a.a === 'unpick') { S.turn = withdraw(PHASES, S.turn, seat); persist(); return render(); }
     if (a.a === 'pick' && validPick(r, seat, a.idxs)) {
       const res = submit(PHASES, S.turn, seat, a.idxs);
       S.turn = res.turn;
       if (res.done) return reveal(r, res.done.moves);
+      sfx.lock();
       persist(); return render();
     }
   }
@@ -149,9 +159,9 @@ function onAction(seat, a) {
     S.turn = res.turn; S.mismatch = null;
     if (res.done) {
       const m = res.done.moves;
-      if (agree && m.warden !== m.striker) { S.mismatch = m; S.turn = newTurn(); }
-      else { S.reveal = null; return setRun(apply(m)); }
-    }
+      if (agree && m.warden !== m.striker) { S.mismatch = m; S.turn = newTurn(); sfx.bad(); }
+      else { S.reveal = null; sfx.good(); return setRun(apply(m)); }
+    } else sfx.tick();
     persist(); render();
   };
   if (r.stage === 'reward' && a.a === 'reward' && (a.card === null || r.rewards[seat].includes(a.card))) vote(a.card, m => chooseReward(r, m));
@@ -163,70 +173,187 @@ function onAction(seat, a) {
 }
 
 const wait = ms => new Promise(res => setTimeout(res, ms));
+// The reveal: both hands land one card at a time, then the enemy acts. Each step gets its own moment on the TV.
 async function reveal(r, picks) {
   const played = Object.fromEntries(SEATS.map(seat => [seat, picks[seat].map(i => r.piles[seat].hand[i])]));
   const { state, events, mid } = resolve(r, picks);
+  const quietRead = S.quiet && !Object.keys(r.hints || {}).length; // no hints at all: a pure read of each other
   S.reveal = { played, events, turn: r.turn };
   busy = true; shown = 0; render();
-  const lastCard = events.filter(x => x.seat !== 'enemy').length;
+  sfx.reveal();
+  await wait(700);
+  const lastCard = events.filter(isPlayer).length;
   for (shown = 1; shown <= events.length; shown++) {
     // the bars move with the reveal: after the players' cards, then after the enemy
     const ev = events[shown - 1];
-    if (ev.seat !== 'enemy' && shown === lastCard)
-      S.run = { ...r, enemy: { ...r.enemy, hp: mid.enemyHp, block: mid.enemyBlock }, hp: mid.hp, block: mid.block };
-    if (ev.seat === 'enemy') S.run = { ...state, stage: 'fight', turn: r.turn, enemy: { ...state.enemy, i: r.enemy.i } };
+    let after = null, applied = false;
+    if (isPlayer(ev) && shown === lastCard)
+      after = { ...r, enemy: { ...r.enemy, hp: mid.enemyHp, block: mid.enemyBlock }, hp: mid.hp, block: mid.block, fight: state.fight };
+    if (ev.seat === 'enemy') after = { ...state, stage: 'fight', turn: r.turn, enemy: { ...state.enemy, i: r.enemy.i } };
+    // the numbers change at the moment of impact, not before the cards arrive
+    const apply = () => { if (after && !applied) { applied = true; S.run = after; render(); } };
     render();
     narrate(ev);
-    if (ev.seat !== 'enemy' && /damage/.test(ev.text)) hurt();
-    await wait(ev.combo ? 2300 : ev.seat === 'enemy' ? 1500 : 1200);
+    await moment(ev, quietRead, apply);
+    apply();
   }
-  $('narrate').classList.add('hidden');
+  await wait(500);
+  $('narrate').innerHTML = '';
   busy = false;
   if (state.stage === 'reward' && isTutorial(state)) { meta.tutorialDone = true; saveMeta(); }
   if (state.stage === 'won') { meta.wins++; meta.maxAsc = Math.min(MAX_ASC, Math.max(meta.maxAsc, state.asc + 1)); S.asc = meta.maxAsc; saveMeta(); }
   setRun(state);
 }
-function hurt() { const i = document.querySelector('.enemy .ico'); if (!i) return; i.classList.add('hurt'); setTimeout(() => i.classList.remove('hurt'), 220); }
 
-// The big line across the TV saying what just happened; combos get the pair and a splash.
+const num = (re, t) => +(t.match(re)?.[1] || 0);
+const foe = () => $('e-art');
+async function moment(ev, quietRead, apply) {
+  if (isPlayer(ev)) {
+    const el = document.querySelector('.card.enter');
+    sfx.whoosh();
+    await wait(380);
+    if (ev.combo) await fusion(ev, quietRead);
+    apply();
+    if (ev.dealt && foe()) {
+      foe().classList.remove('hurt'); void foe().offsetWidth; foe().classList.add('hurt');
+      shake($('enemy')); popText(foe(), `-${ev.dealt}`, ev.dealt >= 15 ? 'crit' : 'dmg');
+      ev.dealt >= 15 ? (sfx.thud(), burst(foe(), { count: 16, spread: 160 })) : sfx.thud();
+    }
+    const blk = num(/\+(\d+) Block/, ev.text), heal = num(/heal (\d+)/, ev.text);
+    if (blk) { popText($('party'), `+${blk} Block`, 'blk'); sfx.lock(); }
+    if (heal) { popText($('party'), `+${heal}`, 'heal'); sfx.chime(); }
+    if (/Vulnerable|Weak|Poison/.test(ev.text) && !ev.dealt && foe()) { popText(foe(), ev.text.match(/(Vulnerable|Weak|Poison) \d+/)?.[0] || '', 'status'); sfx.select(); }
+    if (el && ev.combo) burst(el, { count: 10 });
+    return wait(ev.combo ? 900 : 1000);
+  }
+  if (ev.sync) {
+    showMoment(`<div class="syncm">${art('sync', { size: 120, cls: 'spin' })}<div class="big">In sync!</div><div>${esc(ev.text)}</div></div>`);
+    sfx.chime(); burst($('moment'), { count: 24, sprite: 'star', spread: 220 });
+    await wait(2200); hideMoment(); return;
+  }
+  // the enemy
+  if (ev.kind === 'turn') {
+    if (ev.atk && foe()) {
+      foe().classList.add('lunge'); await wait(260); apply();
+      const total = ev.atk.per * ev.atk.hits, blocked = total - ev.atk.through;
+      if (blocked > 0) { shatter(); sfx.lock(); }
+      if (ev.atk.through) { shake($('party')); popText($('party'), `-${ev.atk.through}`, 'bad'); sfx.bad(); }
+      else popText($('party'), 'Blocked!', 'blk');
+      setTimeout(() => foe()?.classList.remove('lunge'), 400);
+    }
+    if (ev.buff && foe()) { popText(foe(), `+${ev.buff} Strength`, 'bad'); sfx.bad(); }
+    if (ev.block && foe() && !ev.atk) { popText(foe(), `+${ev.block} Block`, 'blk'); sfx.lock(); }
+    return wait(1500);
+  }
+  apply();
+  if (ev.kind === 'poison' && foe()) { popText(foe(), `-${ev.amount}`, 'poison'); sfx.splash(); return wait(1000); }
+  if (ev.kind === 'thorns') { if (ev.through) { shake($('party')); popText($('party'), `-${ev.through}`, 'bad'); } sfx.bad(); return wait(1000); }
+  if (ev.kind === 'defeat' && foe()) { foe().classList.add('die'); sfx.win(); burst(foe(), { count: 30, sprite: 'star', spread: 240, size: 28 }); return wait(1600); }
+  return wait(1000);
+}
+
+// A combo: both cards slide in from their player's side and lock together.
+async function fusion(ev, quietRead) {
+  const mine = ev.card, theirs = ev.partnerCard;
+  const left = ev.seat === 'warden' ? mine : theirs, right = ev.seat === 'warden' ? theirs : mine;
+  showMoment(`<div class="fusion">
+    <div class="fcard l">${cardHtml(left, { pic: 56 })}</div><div class="fcard r">${cardHtml(right, { pic: 56 })}</div>
+    <div class="fboom">${linkIcon(72)}<div class="big">Combo!</div><div>${esc(card(mine).name)}: ${esc(ev.text)}</div>${quietRead ? '<div class="read">Perfect read: no hints, no words</div>' : ''}</div></div>`);
+  await wait(520);
+  sfx.great(); burst($('moment'), { count: 30, spread: 260, size: 26 });
+  await wait(1500); hideMoment();
+}
+function showMoment(html) { const m = $('moment'); m.innerHTML = html; m.classList.remove('hidden'); }
+function hideMoment() { $('moment').classList.add('hidden'); $('moment').innerHTML = ''; }
+function shatter() {
+  const p = $('party'), s = document.createElement('div');
+  s.className = 'shatter'; s.innerHTML = art('s-block', { size: 90 });
+  p.appendChild(s); setTimeout(() => s.remove(), 800);
+}
+
+// The line under the party saying what just happened.
 function narrate(ev) {
   const el = $('narrate');
   if (ev.seat === 'enemy') el.innerHTML = `<div class="nar enemy">${esc(ev.text)}</div>`;
-  else if (ev.combo) {
-    const c = card(ev.card), p = card(ev.partnerCard);
-    el.innerHTML = `<div class="nar combo"><div class="boom">🤝 COMBO!</div><div class="pair"><span>${ROLES[partnerOf(ev.seat)].icon} ${esc(p.name)}</span><b>+</b><span>${ROLES[ev.seat].icon} ${esc(c.name)}</span></div><div>${esc(ev.text)}</div></div>`;
-  } else el.innerHTML = `<div class="nar">${ROLES[ev.seat].icon} <b>${esc(nameOf(ev.seat))}</b> plays <b>${esc(card(ev.card).name)}</b>: ${esc(ev.text)}</div>`;
-  el.classList.remove('hidden');
+  else if (ev.sync) el.innerHTML = `<div class="nar combo">${art('sync', { size: 26 })}<span>${esc(ev.text)}</span></div>`;
+  else el.innerHTML = `<div class="nar${ev.combo ? ' combo' : ''}">${roleIcon(ev.seat, 28)}<span><b>${esc(nameOf(ev.seat))}</b> plays <b>${esc(card(ev.card).name)}</b>${ev.combo ? ` ${linkIcon(22)} combo` : ''}: ${esc(ev.text)}</span></div>`;
 }
 
 // What the training fight tells each seat, turn by turn.
+const T = (s) => art(s, { size: 20 });
 function tutorialTip(r, seat) {
   if (!isTutorial(r) || r.stage !== 'fight') return null;
   if (r.turn === 1) return seat === 'warden'
-    ? 'Training! Tap <b>🎯 Mark Target</b>, then <b>Lock in</b>. It makes the dummy Vulnerable, and it powers your partner\'s Execute.'
+    ? `Training! Tap <b>${T('tag-mark')} Mark Target</b>, then <b>Lock in</b>. It makes the dummy Vulnerable, and it powers your partner's Execute.`
     : seat === 'striker'
-    ? 'Training! Tap <b>Execute</b> (it costs 2 ⚡), then <b>Lock in</b>. If your partner plays a 🎯 Mark card this turn, Execute deals 15 instead of 7, and Vulnerable makes it 22!'
-    : 'Training fight. Warden: play 🎯 Mark Target. Striker: play Execute. Then both lock in and watch the combo.';
-  if (r.turn === 2) return `The dummy will attack for ${describeIntent(r.enemy).find(p => p.k === 'atk')?.total ?? 0} (the red box). Try this: one of you blocks with a 🛡️ card while the other attacks.`;
-  return 'Finish it off! Tap any underlined word on a card to see what it means.';
+    ? `Training! Tap <b>Execute</b> (it costs 2 ${T('energy')}), then <b>Lock in</b>. If your partner plays a ${T('tag-mark')} Mark card this turn, Execute deals 15 instead of 7, and Vulnerable makes it 22!`
+    : `Training fight. Warden: play ${T('tag-mark')} Mark Target. Striker: play Execute. Then both lock in and watch the combo.`;
+  if (r.turn === 2) return `The dummy will attack for ${describeIntent(r.enemy).find(p => p.k === 'atk')?.total ?? 0} (the red box). Try this: one of you blocks with a ${T('tag-guard')} card while the other attacks.`;
+  return `Finish it off! Land combos on ${SYNC} turns in a row to get ${T('sync')} in sync.`;
+}
+
+// Persistent pieces of the enemy and party panels, so their animations survive re-renders.
+function renderEnemy(r, show) {
+  const el = $('enemy'), e = r.enemy;
+  if (!show || !e) { el.innerHTML = ''; el._key = null; return; }
+  const info = ENEMIES[e.key];
+  if (el._key !== e.key + r.floor) {
+    el._key = e.key + r.floor;
+    el.innerHTML = `<div id="e-intent"></div><div class="words" id="e-words"></div>
+      <div class="foe-art anim-${ENEMY_ANIM[e.key] || 'breathe'}" id="e-art">${enemyArt(e.key, 210)}</div>
+      <h2>${esc(info.name)}</h2><div class="about">${esc(info.about)}</div>
+      <div class="bar" id="e-bar"><i></i><b></b></div><div class="row" id="e-pills"></div>`;
+  }
+  const set = (id, h) => { if ($(id).innerHTML !== h) $(id).innerHTML = h; };
+  set('e-intent', intentHtml(e, true));
+  set('e-words', esc(intentWords(e)));
+  set('e-pills', statusPills(e));
+  $('e-bar').querySelector('i').style.width = `${100 * e.hp / e.max}%`;
+  $('e-bar').querySelector('b').textContent = `${e.hp} / ${e.max}`;
+  const big = describeIntent(e).some(p => p.k === 'charge' || (p.k === 'atk' && p.total >= 15));
+  $('e-art').classList.toggle('windup', big && !busy);
+  if (!busy) $('e-art').classList.remove('die');
+}
+function renderParty(r) {
+  const el = $('party');
+  if (!el._built) {
+    el._built = true;
+    el.innerHTML = `<div class="lbl"><span class="who">${roleIcon('warden', 30)}${roleIcon('striker', 30)} ${art('heart', { size: 22 })} The party</span><span id="p-pills"></span></div>
+      <div class="bar party" id="p-bar"><i></i><b></b></div><div class="row" id="p-extra"></div>`;
+  }
+  const set = (id, h) => { if ($(id).innerHTML !== h) $(id).innerHTML = h; };
+  set('p-pills', partyPills(r) + (r.fight && r.stage === 'fight' ? ' ' + syncMeter(r.fight.streak, SYNC) : ''));
+  $('p-bar').querySelector('i').style.width = `${100 * r.hp / r.maxHp}%`;
+  $('p-bar').querySelector('b').textContent = `${r.hp} / ${r.maxHp}`;
+  set('p-extra', r.relics.map(x => `<span class="pill relic" title="${esc(RELICS[x].text)}">${art(RELICS[x].icon, { size: 22 })} ${esc(RELICS[x].name)}: <span style="font-weight:500">${esc(RELICS[x].text)}</span></span>`).join(''));
 }
 
 function render() {
   const r = S.run;
   $('mode').textContent = S.quiet ? 'Quiet: hints only' : 'Talk freely';
+  $('mute').innerHTML = `${art(isMuted() ? 'mute' : 'sound', { size: 20 })} ${isMuted() ? 'Sound off' : 'Sound on'}`;
   $('asc').textContent = r ? `Ascension ${r.asc}` : `Ascension ${S.asc}`;
   $('lobby').classList.toggle('hidden', !S.lobby);
   if (S.lobby) renderLobby($('lobby'), {
     room: room.room, title: 'Co-op Spire',
-    seats: SEATS.map(k => ({ ...ROLES[k], taken: !!room.seat(k), name: room.seat(k)?.name, connected: room.connected(k) })),
+    seats: SEATS.map(k => ({ ...ROLES[k], icon: roleIcon(k, 30), taken: !!room.seat(k), name: room.seat(k)?.name, connected: room.connected(k) })),
     startable: bothSeated(), startLabel: r ? `Resume floor ${r.floor + 1}` : meta.tutorialDone ? 'Start a run' : 'Start (with a training fight)',
   });
   if (!r) return sendViews();
 
+  // fanfares when the run moves on
+  if (r.stage !== lastStage && !busy) {
+    if (r.stage === 'reward' || r.stage === 'relic') setTimeout(() => { sfx.win(); burst({ x: innerWidth / 2, y: innerHeight * .3 }, { count: 30, sprite: 'star', spread: 300, size: 28 }); }, 150);
+    if (r.stage === 'won') setTimeout(() => { sfx.win(); for (let i = 0; i < 3; i++) setTimeout(() => burst({ x: innerWidth * (.25 + .25 * i), y: innerHeight * .35 }, { count: 30, sprite: 'star', spread: 280, size: 30 }), i * 350); }, 150);
+    if (r.stage === 'lost') sfx.lose();
+    if (r.stage === 'fight' && lastStage && lastStage !== 'fight') sfx.whoosh();
+    lastStage = r.stage;
+  }
+
   // the map in the header: one column per floor, the path taken lit
   $('map').innerHTML = r.map.map((opts, f) => `<div class="col">${opts.map((n, i) => {
-    const on = f < r.floor ? r.path[f] === i : f === r.floor ? r.path[f] === i : false;
-    return `<span class="${f < r.floor ? (on ? 'done' : 'skip') : f === r.floor && on ? 'now' : ''}" title="${NODE[n.type].name}">${NODE[n.type].icon}</span>`;
+    const on = f <= r.floor && r.path[f] === i;
+    return `<span class="${f < r.floor ? (on ? 'done' : 'skip') : f === r.floor && on ? 'now' : ''}" title="${NODE[n.type].name}">${nodeIcon(n.type, 20)}</span>`;
   }).join('')}</div>`).join('<i></i>');
 
   const inFight = r.stage === 'fight' || busy;
@@ -236,80 +363,72 @@ function render() {
     const rv = busy || (S.reveal && r.stage === 'fight' && S.reveal.turn === r.turn - 1) ? S.reveal : null;
     let evs = [];
     if (rv) evs = rv.events.map((e, i) => ({ ...e, i })).filter(e => e.seat === seat && (!busy || e.i < shown));
-    const h = r.hints?.[seat] && HINTS.find(x => x.e === r.hints[seat]);
+    const h = r.hints?.[seat] && HINTS.find(x => x.id === r.hints[seat]);
     const pile = r.piles?.[seat];
-    $('p-' + seat).innerHTML = `
-      <h2>${ROLES[seat].icon} ${esc(nameOf(seat))}</h2>
+    const html = `
+      <h2>${roleIcon(seat, 44)} ${esc(nameOf(seat))}</h2>
       <div class="chip"><span class="dot${room.connected(seat) ? ' on' : ''}"></span>${ROLES[seat].label}</div>
-      ${inFight && !busy ? `<div class="state${locked[seat] ? ' done' : ''}">${locked[seat] ? '✅ Locked in' : '🤔 Choosing…'}</div>` : ''}
-      ${inFight && !busy && h ? `<div class="hint"><b>${h.e}</b>${esc(h.t)}</div>` : ''}
+      ${inFight && !busy ? `<div class="state${locked[seat] ? ' done' : ''}">${locked[seat] ? `${art('check', { size: 26 })} Locked in` : '<span class="thinking"><i></i><i></i><i></i></span> Choosing'}</div>` : ''}
+      ${inFight && !busy && h ? `<div class="hint">${hintIcon(h.id, 36)}${esc(h.t)}</div>` : ''}
       ${inFight && pile ? `<div class="deckinfo">Deck ${r.decks[seat].length} cards · ${pile.draw.length} to draw · ${pile.discard.length} discarded</div>` : ''}
       ${rv ? `<div class="label">${busy ? 'Revealed' : 'Last turn'}</div>` : ''}
-      <div class="played">${evs.map(e => cardHtml(e.card, { cls: e.combo ? 'combo' : '' }) + `<div class="ev">${e.combo ? '🤝 COMBO · ' : ''}${esc(e.text)}</div>`).join('')}</div>`;
+      <div class="played">${evs.map(e => cardHtml(e.card, { cls: `${e.combo ? 'combo' : ''}${busy && e.i === shown - 1 ? ' enter from-' + seat : ''}` }) + `<div class="ev">${e.combo ? `${linkIcon(18)} Combo · ` : ''}${esc(e.text)}</div>`).join('')}</div>`;
+    if ($('p-' + seat).innerHTML !== html) $('p-' + seat).innerHTML = html;
   }
 
   const tip = tutorialTip(r, null);
   $('tip').classList.toggle('hidden', !tip || busy);
-  $('tip').innerHTML = tip || '';
+  $('tip').innerHTML = tip ? `${art('cap', { size: 24 })} <span>${tip}</span>` : '';
 
   const step = busy ? 3 : !inFight ? 0 : SEATS.every(s => locked[s]) ? 3 : SEATS.some(s => locked[s]) ? 2 : 1;
   $('steps').innerHTML = inFight ? [['1', 'Pick in secret'], ['2', 'Lock in'], ['3', 'Reveal']].map(([n, t], i) =>
     `<span class="${step === i + 1 ? 'on' : step > i + 1 ? 'past' : ''}"><b>${n}</b> ${t}</span>`).join('<i>→</i>') +
-    `<span class="turnno">Turn ${r.turn} · floor ${r.floor + 1} of ${r.map.length}${S.quiet ? ' · 🤫 Quiet: hints only' : ' · 🗣️ Talk it through'}</span>` : '';
+    `<span class="turnno">Turn ${r.turn} · floor ${r.floor + 1} of ${r.map.length} · ${S.quiet ? 'Quiet: hints only' : 'Talk it through'}</span>` : '';
 
-  const e = r.enemy, info = e && ENEMIES[e.key];
-  $('enemy').innerHTML = e && inFight ? `
-    ${intentHtml(e, true)}
-    <div class="words">${esc(intentWords(e))}</div>
-    <div class="ico">${info.icon}</div><h2>${esc(info.name)}</h2>
-    <div class="about">${esc(info.about)}</div>
-    <div class="bar"><i style="width:${100 * e.hp / e.max}%"></i><b>${e.hp} / ${e.max}</b></div>
-    <div class="row">${statusPills(e)}</div>` : '';
-  $('party').innerHTML = `
-    <div class="lbl"><b>❤️ The party</b><span>${r.block ? `<span class="pill blk">🛡️ Block ${r.block}</span> ` : ''}${r.str ? `<span class="pill str">💪 Strength ${r.str}</span> ` : ''}</span></div>
-    <div class="bar party"><i style="width:${100 * r.hp / r.maxHp}%"></i><b>${r.hp} / ${r.maxHp}</b></div>
-    ${r.relics.length ? `<div class="row">${r.relics.map(x => `<span class="pill" title="${esc(RELICS[x].text)}">${RELICS[x].icon} ${esc(RELICS[x].name)}: <span style="font-weight:400">${esc(RELICS[x].text)}</span></span>`).join('')}</div>` : ''}`;
-
-  const enemyEv = S.reveal && inFight && (busy ? S.reveal.events.slice(0, shown) : S.reveal.events).filter(x => x.seat === 'enemy');
-  $('log').innerHTML = (enemyEv || []).map(x => `<div>${esc(x.text)}</div>`).join('');
+  renderEnemy(r, inFight);
+  if (inFight) renderParty(r);
+  $('party').classList.toggle('hidden', !inFight);
+  if (!busy && !inFight) $('narrate').innerHTML = '';
 
   renderStage(r);
   sendViews();
 }
 
-const votesFor = value => SEATS.filter(s => S.turn.got[s] === value).map(s => `${ROLES[s].icon} ${esc(nameOf(s))}`).join(' ');
+const votesFor = value => SEATS.filter(s => S.turn.got[s] === value).map(s => `${roleIcon(s, 22)} ${esc(nameOf(s))}`).join(' ');
 function summary(f) {
-  return `<div class="summary"><div><b>${f.turns}</b>turns</div><div><b>${f.combos}</b>combos 🤝</div><div><b>${f.dealt}</b>damage dealt</div><div><b>${f.taken}</b>HP lost</div></div>`;
+  return `<div class="summary"><div><b>${f.turns}</b>turns</div><div>${linkIcon(22)}<b>${f.combos}</b>combos</div><div><b>${f.dealt}</b>damage dealt</div><div><b>${f.taken}</b>HP lost</div>${f.bestStreak ? `<div>${art('sync', { size: 22 })}<b>${f.bestStreak}</b>best sync</div>` : ''}</div>`;
 }
 function nodeBlurb(n) {
-  if (n.enemy) { const en = ENEMIES[n.enemy]; return `${en.icon} <b>${esc(en.name)}</b><br><span style="color:var(--ink-2)">${esc(en.about)}</span>${n.type === 'elite' ? '<br>Drops a relic.' : ''}`; }
+  if (n.enemy) { const en = ENEMIES[n.enemy]; return `<b>${esc(en.name)}</b><br><span style="color:var(--ink-2)">${esc(en.about)}</span>${n.type === 'elite' ? '<br>Drops a relic.' : ''}`; }
   if (n.type === 'rest') return 'Heal, or each of you upgrades a card.';
   return 'Something unexpected: a choice to make together.';
 }
+const nodePic = n => n.enemy ? enemyArt(n.enemy, 96) : nodeIcon(n.type, 80);
 
 function renderStage(r) {
   const el = $('stage'), show = !S.lobby && !busy && r.stage !== 'fight';
   el.classList.toggle('hidden', !show);
   if (!show) return;
-  const voted = lockedIn(VOTE, S.turn), status = SEATS.map(s => `${ROLES[s].icon} ${esc(nameOf(s))}: ${voted[s] ? '✅ chosen' : '🤔 choosing'}`).join(' &nbsp; ');
+  const voted = lockedIn(VOTE, S.turn);
+  const status = SEATS.map(s => `${roleIcon(s, 22)} ${esc(nameOf(s))}: ${voted[s] ? 'chosen' : 'choosing…'}`).join(' &nbsp; ');
   const clash = S.mismatch ? `<p style="color:var(--bad)">You picked different ones. Talk it over and choose together.</p>` : '';
   let h = '';
-  if (r.stage === 'reward') h = `<h2>Victory!</h2>${r.lastFight ? summary(r.lastFight) : ''}<p>Each of you picks a card for your <b>own</b> deck on your phone, or skips.</p><p>${status}</p>`;
-  else if (r.stage === 'upgrade') h = `<h2>🔥 Training</h2><p>Each of you picks one card in your deck to upgrade (bigger numbers).</p><p>${status}</p>`;
+  if (r.stage === 'reward') h = `<h2>${art('crown', { size: 52 })} Victory!</h2>${r.lastFight ? `<div class="foe-art die-done">${enemyArt(r.lastFight.enemy, 90)}</div>` + summary(r.lastFight) : ''}<p>Each of you picks a card for your <b>own</b> deck on your phone, or skips.</p><p>${status}</p>`;
+  else if (r.stage === 'upgrade') h = `<h2>${art('n-rest', { size: 52 })} Training</h2><p>Each of you picks one card in your deck to upgrade (bigger numbers).</p><p>${status}</p>`;
   else if (r.stage === 'relic') h = `<h2>A relic glints in the rubble</h2><p>Agree on one: both choose the same on your phones.</p>
-      <div class="opts">${r.relicChoices.map(id => `<div class="opt"><div class="big">${RELICS[id].icon}</div><h3>${esc(RELICS[id].name)}</h3><div>${esc(RELICS[id].text)}</div><div class="votes">${votesFor(id)}</div></div>`).join('')}</div>${clash}<p>${status}</p>`;
-  else if (r.stage === 'rest') h = `<h2>🔥 A campfire</h2><p>Agree on one on your phones.</p><div class="opts">${Object.entries(REST).map(([k, t]) => `<div class="opt"><h3>${esc(t)}</h3><div class="votes">${votesFor(k)}</div></div>`).join('')}</div>${clash}<p>${status}</p>`;
+      <div class="opts">${r.relicChoices.map(id => `<div class="opt"><div class="big">${art(RELICS[id].icon, { size: 72, cls: 'bob' })}</div><h3>${esc(RELICS[id].name)}</h3><div>${esc(RELICS[id].text)}</div><div class="votes">${votesFor(id)}</div></div>`).join('')}</div>${clash}<p>${status}</p>`;
+  else if (r.stage === 'rest') h = `<h2>${art('n-rest', { size: 60, cls: 'pulse' })} A campfire</h2><p>Agree on one on your phones.</p><div class="opts">${Object.entries(REST).map(([k, t]) => `<div class="opt"><div class="big">${art(k === 'heal' ? 'heal' : 'c-hammer', { size: 60 })}</div><h3>${esc(t)}</h3><div class="votes">${votesFor(k)}</div></div>`).join('')}</div>${clash}<p>${status}</p>`;
   else if (r.stage === 'event') {
     const ev = EVENTS[r.event];
-    h = `<h2>${ev.icon} ${esc(ev.title)}</h2><p>${esc(ev.text)}</p><div class="opts">${ev.options.map(o => `<div class="opt"><h3>${esc(o.label)}</h3><div>${esc(o.desc)}</div><div class="votes">${votesFor(o.id)}</div></div>`).join('')}</div>${clash}<p>Agree on one on your phones. ${status}</p>`;
+    h = `<h2>${art(ev.icon, { size: 64 })} ${esc(ev.title)}</h2><p>${esc(ev.text)}</p><div class="opts">${ev.options.map(o => `<div class="opt"><h3>${esc(o.label)}</h3><div>${esc(o.desc)}</div><div class="votes">${votesFor(o.id)}</div></div>`).join('')}</div>${clash}<p>Agree on one on your phones. ${status}</p>`;
   } else if (r.stage === 'map') {
     const opts = nextOptions(r);
     h = `<h2>Floor ${r.floor + 1} cleared</h2>${r.note ? `<p style="color:var(--ink)">${esc(r.note)}</p>` : ''}<p><b>Good stopping point.</b> The run is saved; close the tab whenever you like.</p>
       ${opts.length > 1 ? `<p>The path splits. Choose together on your phones:</p>` : '<p>Next:</p>'}
-      <div class="opts">${opts.map((n, i) => `<div class="opt"><div class="big">${NODE[n.type].icon}</div><h3>${NODE[n.type].name}</h3><div>${nodeBlurb(n)}</div>${opts.length > 1 ? `<div class="votes">${votesFor(i)}</div>` : ''}</div>`).join('')}</div>
+      <div class="opts">${opts.map((n, i) => `<div class="opt"><div class="big">${nodePic(n)}</div><h3>${NODE[n.type].name}</h3><div>${nodeBlurb(n)}</div>${opts.length > 1 ? `<div class="votes">${votesFor(i)}</div>` : ''}</div>`).join('')}</div>
       ${opts.length > 1 ? `${clash}<p>${status}</p>` : `<div class="opts"><button class="btn go" data-act="advance">Climb on</button></div>`}`;
-  } else if (r.stage === 'won') h = `<h2>🔔 You reached the top!</h2><p>${esc(r.why)}</p>${summary(r.stats)}<p><b>Ascension ${Math.min(MAX_ASC, r.asc + 1)} unlocked:</b> enemies are tougher next run.</p><p>Fill in the playtest rubric together.</p><div class="opts"><button class="btn go" data-act="newrun">New run</button></div>`;
-  else if (r.stage === 'lost') h = `<h2>💀 The climb ends</h2><p>${esc(r.why)} You made it to floor ${r.floor + 1} of ${r.map.length}.</p>${summary(r.stats)}<div class="opts"><button class="btn go" data-act="newrun">New run</button></div>`;
+  } else if (r.stage === 'won') h = `<h2>${art('crown', { size: 64, cls: 'bob' })} You reached the top!</h2><p>${esc(r.why)}</p>${summary(r.stats)}<p><b>Ascension ${Math.min(MAX_ASC, r.asc + 1)} unlocked:</b> enemies are tougher next run.</p><p>Fill in the playtest rubric together.</p><div class="opts"><button class="btn go" data-act="newrun">New run</button></div>`;
+  else if (r.stage === 'lost') h = `<h2>${art('skull', { size: 56 })} The climb ends</h2><p>${esc(r.why)} You made it to floor ${r.floor + 1} of ${r.map.length}.</p>${summary(r.stats)}<div class="opts"><button class="btn go" data-act="newrun">New run</button></div>`;
   const html = `<div class="panel">${h}</div>`;
   if (el.innerHTML !== html) el.innerHTML = html;
 }
@@ -323,8 +442,8 @@ function sendViews() {
       const phases = r.stage === 'fight' ? PHASES : VOTE, pile = r.piles?.[seat];
       Object.assign(v, {
         stage: r.stage, floor: r.floor, floors: r.map.length, turn: r.turn, why: r.why, asc: r.asc,
-        hp: r.hp, maxHp: r.maxHp, block: r.block, str: r.str, relics: r.relics,
-        enemy: r.enemy && { key: r.enemy.key, name: ENEMIES[r.enemy.key].name, icon: ENEMIES[r.enemy.key].icon, about: ENEMIES[r.enemy.key].about, hp: r.enemy.hp, max: r.enemy.max, block: r.enemy.block, vuln: r.enemy.vuln, weak: r.enemy.weak, poison: r.enemy.poison, str: r.enemy.str, i: r.enemy.i, words: intentWords(r.enemy) },
+        hp: r.hp, maxHp: r.maxHp, block: r.block, str: r.str, relics: r.relics, streak: r.fight?.streak || 0,
+        enemy: r.enemy && { key: r.enemy.key, name: ENEMIES[r.enemy.key].name, about: ENEMIES[r.enemy.key].about, hp: r.enemy.hp, max: r.enemy.max, block: r.enemy.block, vuln: r.enemy.vuln, weak: r.enemy.weak, poison: r.enemy.poison, str: r.enemy.str, i: r.enemy.i, words: intentWords(r.enemy) },
         locked: lockedIn(phases, S.turn), mine: S.turn.got[seat] ?? null, mismatch: !!S.mismatch,
         energy: r.energy?.[seat], hand: r.stage === 'fight' ? pile.hand : [],
         piles: pile && { draw: pile.draw.length, discard: pile.discard.length },
@@ -348,6 +467,7 @@ document.body.addEventListener('click', e => {
   if (act === 'help') return showHelp(HOW_TO_PLAY);
   if (act) onAction(null, { a: act });
 });
+$('mute').onclick = () => { setMuted(!isMuted()); render(); };
 $('mode').onclick = () => { S.quiet = !S.quiet; persist(); render(); };
 $('swap').onclick = () => { room.swap('warden', 'striker'); render(); };
 $('seats').onclick = () => { S.lobby = true; persist(); render(); };
@@ -361,6 +481,7 @@ function confirmNew() {
   setTimeout(() => $('abandon').textContent = 'New run', 3000);
   return false;
 }
+ready = true;
 render();
 </script>
 </body>

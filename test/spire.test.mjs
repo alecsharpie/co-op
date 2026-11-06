@@ -1,7 +1,7 @@
 // Rules checks for Co-op Spire: node --test test/
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { newRun, resolve, validPick, chooseReward, chooseRelic, chooseUpgrade, chooseEvent, rest, advance, describeIntent, intentWords, intentOf, nextOptions, nodeOf, SEATS, partnerOf } from '../spire/game.js';
+import { newRun, resolve, validPick, chooseReward, chooseRelic, chooseUpgrade, chooseEvent, rest, advance, describeIntent, intentWords, intentOf, nextOptions, nodeOf, SEATS, partnerOf, SYNC, ENERGY } from '../spire/game.js';
 import { card, ALL, REWARDS, ENEMIES, EVENTS, TAGS, LAYOUT } from '../spire/cards.js';
 
 // put chosen cards in hand, so tests do not depend on the shuffle
@@ -209,4 +209,21 @@ test('talking it over wins more runs than playing blind', () => {
   console.log(`runs won over ${N} seeds: greedy ${tally.greedy}, coordinated ${tally.coordinated}; winning runs average ${avg} turns`);
   assert.ok(tally.coordinated > tally.greedy, 'coordination should pay off');
   assert.ok(tally.coordinated < N, 'the climb should not be a sure thing');
+});
+
+test('three combo turns in a row put the party in sync: +1 energy each next turn', () => {
+  let s = newRun(7, { tutorial: true });
+  // the dummy is soft: keep playing Mark + Execute style pairs; force a combo by giving both the right cards each turn
+  for (let t = 1; t <= SYNC; t++) {
+    s.piles.warden.hand = ['mark', 'guard', 'guard', 'guard', 'guard'];
+    s.piles.striker.hand = ['execute', 'strike', 'strike', 'strike', 'strike'];
+    s.enemy.hp = 999; s.enemy.max = 999;
+    const r = resolve(s, { warden: [0], striker: [0] });
+    assert.equal(r.state.fight.streak, t);
+    assert.equal(r.events.some(e => e.sync), t === SYNC, `turn ${t}`);
+    s = r.state;
+  }
+  assert.equal(s.energy.warden, ENERGY + 1);
+  const broken = resolve(s, { warden: [], striker: [] }).state;
+  assert.equal(broken.fight.streak, 0);
 });

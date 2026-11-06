@@ -6,12 +6,12 @@ talk to each other.
 
 **Play:** https://www.alecsharpie.me/co-op/ (open a board on the TV, scan the QR code with both phones)
 
-| | Prototype | |
-|---|---|---|
-| 🗼 | [Lighthouse & Navigator](lighthouse/) | the keeper sees the whole bay, the navigator steers through the fog |
-| 🔐 | [Split-Vision Escape Room](escape/) | each phone holds half the clues; describe, cross-reference, escape |
-| 🌻 | [Two-Keeper Garden](garden/) | plan the day in secret: one grows, one cooks; one sees the weather, one the orders |
-| 🃏 | [Co-op Spire](spire/) | two decks, one enemy; pick in secret, reveal together, land the combo |
+| Prototype | |
+|---|---|
+| [Lighthouse & Navigator](lighthouse/) | the keeper sees the whole bay, the navigator steers through the fog |
+| [Split-Vision Escape Room](escape/) | each phone holds half the clues; describe, cross-reference, escape |
+| [Two-Keeper Garden](garden/) | plan the day in secret: one grows, one cooks; one sees the weather, one the orders |
+| [Co-op Spire](spire/) | two decks, one enemy; pick in secret, reveal together, land the combo |
 
 ## How it fits together
 
@@ -22,6 +22,9 @@ talk to each other.
   `server/README.md`), or over BroadcastChannel between tabs with `?net=local`. Phones keep a seat across screen
   locks and board reloads.
 - `shared/phases.js` handles turns with hidden submissions (plan in secret, then reveal).
+- `shared/art.js` holds the house art style and shared icons (all artwork is inline SVG; no emoji, tested by
+  `test/no-emoji.test.mjs`); `shared/sfx.js` synthesises the sound effects. `tools/art-sheet.html?game=<name>`
+  shows every sprite a game defines.
 
 ## Development
 

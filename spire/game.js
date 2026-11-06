@@ -12,7 +12,7 @@ import { card, canUpgrade, STARTERS, REWARDS, ENEMIES, POOLS, RELICS, EVENTS, LA
 export const SEATS = ['warden', 'striker'];
 export const PHASES = [{ name: 'plan', seats: SEATS }];
 export const VOTE = [{ name: 'vote', seats: SEATS }];
-export const ENERGY = 3, HAND = 5, MAX_HP = 60, MAX_ASC = 5;
+export const ENERGY = 3, HAND = 5, MAX_HP = 60, MAX_ASC = 5, SYNC = 3;
 // difficulty at Ascension 0: enemy HP multiplier and extra damage per hit (tuned with the bots in test/)
 export const TUNE = { hp: 1.15, str: 0 };
 export const partnerOf = seat => (seat === 'warden' ? 'striker' : 'warden');
@@ -50,7 +50,7 @@ export function newRun(seed = Date.now(), { asc = 0, tutorial = false } = {}) {
     hp: MAX_HP, maxHp: MAX_HP, str: 0, relics: [], stage: 'map',
     decks: structuredClone(STARTERS), piles: null, energy: null, bonusEnergy: 0, bonusDraw: 0, enemy: null, block: 0, turn: 0,
     rewards: null, relicChoices: null, upgrades: null, event: null, note: '', hints: {}, why: '',
-    stats: { turns: 0, combos: 0, dealt: 0, taken: 0, fights: 0 }, fight: null, lastFight: null,
+    stats: { turns: 0, combos: 0, dealt: 0, taken: 0, fights: 0, bestStreak: 0 }, fight: null, lastFight: null,
   };
   s.map = makeMap(s, tutorial);
   return enterNode(s);
@@ -79,7 +79,7 @@ function enterNode(s) {
   }
   s.block = s.relics.includes('anchor') ? 10 : 0;
   s.turn = 1; s.stage = 'fight'; s.hints = {}; s.bonusEnergy = 0; s.bonusDraw = 0;
-  s.fight = { turns: 0, combos: 0, dealt: 0, taken: 0 };
+  s.fight = { turns: 0, combos: 0, dealt: 0, taken: 0, streak: 0, bestStreak: 0 };
   s.energy = Object.fromEntries(SEATS.map(seat => [seat, ENERGY + (s.relics.includes('lantern') ? 1 : 0)]));
   drawHands(s);
   return s;
@@ -131,7 +131,8 @@ export function validPick(s, seat, idxs) {
 }
 
 // Both picks revealed: resolve the players' cards, poison, then the enemy's turn. Returns {state, events, mid}: one
-// event per card played ({seat, card, combo, partnerCard, text}) then the enemy's ({seat: 'enemy', text}) and the
+// event per card played ({seat, card, combo, partnerCard, dealt, text}), a sync event if the streak paid out
+// ({seat: 'party', sync}), then the enemy's ({seat: 'enemy', kind, text}, kind: thorns | poison | turn | defeat) and the
 // outcome; mid is the bars between the two halves.
 export function resolve(s0, picks) {
   const s = structuredClone(s0), e = s.enemy, info = ENEMIES[e.key], it0 = intentOf(e), events = [];
@@ -182,12 +183,21 @@ export function resolve(s0, picks) {
     if (it0.ghost && p.dealt) p.out.push('(it fades: 1 per hit)');
   }
   s.fight.dealt += Math.max(0, hpBefore - Math.max(0, e.hp));
-  for (const p of plays) events.push({ seat: p.seat, card: p.card, combo: p.combo, partnerCard: p.partnerCard, text: p.out.join(', ') || 'no effect' });
+  for (const p of plays) events.push({ seat: p.seat, card: p.card, combo: p.combo, partnerCard: p.partnerCard, dealt: p.dealt || 0, text: p.out.join(', ') || 'no effect' });
+  // the sync streak: turns in a row with at least one combo; every third one gives both +1 energy next turn
+  const f = s.fight;
+  f.streak = combos ? (f.streak || 0) + 1 : 0;
+  f.bestStreak = Math.max(f.bestStreak || 0, f.streak);
+  s.stats.bestStreak = Math.max(s.stats.bestStreak || 0, f.streak);
+  if (f.streak && f.streak % SYNC === 0) {
+    s.bonusEnergy += 1;
+    events.push({ seat: 'party', sync: true, text: `In sync! ${SYNC} turns of combos in a row: both get +1 energy next turn.` });
+  }
   for (const seat of SEATS) { const pl = s.piles[seat]; for (const i of [...(picks[seat] || [])].sort((a, b) => b - a)) pl.discard.push(...pl.hand.splice(i, 1)); }
   s.fight.combos += combos;
   if (thorns) {
     const soak = Math.min(s.block, thorns); s.block -= soak; s.hp -= thorns - soak; s.fight.taken += thorns - soak;
-    events.push({ seat: 'enemy', text: `The spikes hurt: the party takes ${thorns} (${thorns - soak} through Block).` });
+    events.push({ seat: 'enemy', kind: 'thorns', through: thorns - soak, text: `The spikes hurt: the party takes ${thorns} (${thorns - soak} through Block).` });
   }
   // the bars as they stand once the players' cards have landed, for the reveal to show before the enemy acts
   const mid = { enemyHp: Math.max(0, e.hp), enemyBlock: e.block, hp: Math.max(0, s.hp), block: s.block };
@@ -197,13 +207,13 @@ export function resolve(s0, picks) {
 
   if (e.poison) {
     s.fight.dealt += Math.min(e.poison, e.hp); e.hp -= e.poison;
-    events.push({ seat: 'enemy', text: `${info.name} takes ${e.poison} poison.` });
+    events.push({ seat: 'enemy', kind: 'poison', amount: e.poison, text: `${info.name} takes ${e.poison} poison.` });
     e.poison--;
     if (e.hp <= 0) { e.hp = 0; return { state: winFight(s, events), events, mid }; }
   }
 
   // the enemy's turn
-  const it = it0, said = [];
+  const it = it0, said = [], atk = {};
   e.block = 0;
   if (it.block) { e.block += it.block; said.push(`gains ${it.block} Block`); }
   if (it.atk) {
@@ -211,6 +221,7 @@ export function resolve(s0, picks) {
     let taken = 0;
     for (let k = 0; k < (it.hits || 1); k++) { const soak = Math.min(s.block, per); s.block -= soak; s.hp -= per - soak; taken += per - soak; }
     s.fight.taken += taken;
+    Object.assign(atk, { per, hits: it.hits || 1, through: taken });
     said.push(`attacks for ${per}${it.hits ? '×' + it.hits : ''} (${taken} got through)`);
     if (it.drain && taken) { const h = Math.min(taken, e.max - e.hp); e.hp += h; said.push(`and drinks ${h} back`); }
   }
@@ -218,7 +229,7 @@ export function resolve(s0, picks) {
   if (it.curse) { for (const seat of SEATS) for (let k = 0; k < it.curse; k++) s.piles[seat].discard.push('dread'); said.push('curses you: a Dread card joins each deck for this fight'); }
   if (it.ghost) said.push('flickers back into sight');
   if (it.charge) said.push('begins to toll… something big is coming');
-  events.push({ seat: 'enemy', text: `${info.name} ${said.join(', ')}.` });
+  events.push({ seat: 'enemy', kind: 'turn', atk: atk.per ? atk : null, block: it.block || 0, buff: it.buff || 0, text: `${info.name} ${said.join(', ')}.` });
   e.i = e.i + 1 < info.intents.length ? e.i + 1 : info.loopFrom;
   e.vuln = Math.max(0, e.vuln - 1); e.weak = Math.max(0, e.weak - 1);
   s.block = 0;
@@ -240,7 +251,7 @@ function foldStats(s) {
 
 function winFight(s, events) {
   const name = ENEMIES[s.enemy.key].name;
-  events.push({ seat: 'enemy', text: `${name} is defeated!` });
+  events.push({ seat: 'enemy', kind: 'defeat', text: `${name} is defeated!` });
   s.fight.turns++; s.stats.turns++; s.stats.fights++;
   foldStats(s);
   s.lastFight = { ...s.fight, enemy: s.enemy.key };
@@ -335,8 +346,8 @@ export function advance(s0, choice = 0) {
   return enterNode(s);
 }
 
-export function hint(s0, seat, emoji) {
+export function hint(s0, seat, id) {
   const s = structuredClone(s0);
-  s.hints[seat] = emoji;
+  s.hints[seat] = id;
   return s;
 }

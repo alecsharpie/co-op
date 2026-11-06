@@ -7,14 +7,15 @@
 // ('strike+') and combos always describe exactly what they do.
 
 // The signs that link cards across the two hands: a card "gives" its tags; a combo "needs" one from the partner.
+// icon is a sprite name in art.js, as for enemies, relics and events below.
 export const TAGS = {
-  guard: { icon: '🛡️', name: 'Guard' },
-  mark:  { icon: '🎯', name: 'Mark' },
-  feint: { icon: '🎭', name: 'Feint' },
-  cry:   { icon: '📣', name: 'Battle Cry' },
-  rally: { icon: '🚩', name: 'Rally' },
-  snare: { icon: '🕸️', name: 'Snare' },
-  swift: { icon: '💨', name: 'Swift' },
+  guard: { icon: 'tag-guard', name: 'Guard' },
+  mark:  { icon: 'tag-mark', name: 'Mark' },
+  feint: { icon: 'tag-feint', name: 'Feint' },
+  cry:   { icon: 'tag-cry', name: 'Battle Cry' },
+  rally: { icon: 'tag-rally', name: 'Rally' },
+  snare: { icon: 'tag-snare', name: 'Snare' },
+  swift: { icon: 'tag-swift', name: 'Swift' },
 };
 
 const BASE = {
@@ -120,8 +121,8 @@ export const GLOSSARY = {
   Weak: 'Hits 25% softer. Goes down by 1 each turn.',
   Strength: 'Adds that much to every hit the party deals.',
   Poison: 'The enemy loses that much HP at the end of your turn, then Poison goes down by 1. It ignores Block.',
-  Energy: 'Each of you has 3 ⚡ every turn. A card costs the number in its yellow circle.',
-  Combo: 'A card with 🤝 does more when your partner plays a card with the matching sign in the same turn. Talk about it!',
+  Energy: 'Each of you has 3 energy every turn. A card costs the number on its lightning bolt.',
+  Combo: 'A card with the linked rings does more when your partner plays a card with the matching sign in the same turn. Talk about it!',
   Unplayable: 'Cannot be played. It just takes up room in your hand until the fight ends.',
 };
 
@@ -130,54 +131,54 @@ export const GLOSSARY = {
 // shows, every hit on the enemy deals only 1). thorns: the party takes that much each time it hits the enemy.
 // Intents play in order, then loop back to loopFrom.
 export const ENEMIES = {
-  dummy:    { name: 'Straw Dummy', icon: '🪆', hp: 30, loopFrom: 0, intents: [{ atk: 4 }, { atk: 6 }],
+  dummy:    { name: 'Straw Dummy', icon: 'en-dummy', hp: 30, loopFrom: 0, intents: [{ atk: 4 }, { atk: 6 }],
               about: 'A practice target. Hits gently.' },
-  slime:    { name: 'Bog Slime', icon: '🟢', hp: 56, loopFrom: 0, intents: [{ atk: 11 }, { atk: 6, hits: 2 }, { block: 10, atk: 5 }],
+  slime:    { name: 'Bog Slime', icon: 'en-slime', hp: 56, loopFrom: 0, intents: [{ atk: 11 }, { atk: 6, hits: 2 }, { block: 10, atk: 5 }],
               about: 'Simple and sturdy.' },
-  bat:      { name: 'Vampire Bats', icon: '🦇', hp: 50, loopFrom: 0, intents: [{ atk: 5, hits: 2, drain: true }, { block: 6, atk: 4 }, { atk: 11, drain: true }],
+  bat:      { name: 'Vampire Bats', icon: 'en-bat', hp: 50, loopFrom: 0, intents: [{ atk: 5, hits: 2, drain: true }, { block: 6, atk: 4 }, { atk: 11, drain: true }],
               about: 'Heals by whatever damage gets through your Block.' },
-  crab:     { name: 'Spiked Crab', icon: '🦀', hp: 60, thorns: 2, loopFrom: 0, intents: [{ atk: 9 }, { block: 12 }, { atk: 5, hits: 2 }],
+  crab:     { name: 'Spiked Crab', icon: 'en-crab', hp: 60, thorns: 2, loopFrom: 0, intents: [{ atk: 9 }, { block: 12 }, { atk: 5, hits: 2 }],
               about: 'Thorns 2: the party takes 2 every time it hits. Few big hits beat many small ones.' },
-  cultist:  { name: 'Bell Cultist', icon: '🕯️', hp: 70, loopFrom: 1, intents: [{ buff: 3 }, { atk: 8, buff: 2 }],
+  cultist:  { name: 'Bell Cultist', icon: 'en-cultist', hp: 70, loopFrom: 1, intents: [{ buff: 3 }, { atk: 8, buff: 2 }],
               about: 'Gets stronger every turn. End it fast.' },
-  hexer:    { name: 'Hexer', icon: '🧙', hp: 78, loopFrom: 0, intents: [{ curse: 1, atk: 5 }, { atk: 12 }, { atk: 6, hits: 2 }, { curse: 1, block: 8 }],
+  hexer:    { name: 'Hexer', icon: 'en-hexer', hp: 78, loopFrom: 0, intents: [{ curse: 1, atk: 5 }, { atk: 12 }, { atk: 6, hits: 2 }, { curse: 1, block: 8 }],
               about: 'Curses you with Dread cards that clog your hands.' },
-  wisp:     { name: 'Grave Wisp', icon: '👻', hp: 74, loopFrom: 0, intents: [{ ghost: true, buff: 2 }, { atk: 14 }, { atk: 7, hits: 2 }],
+  wisp:     { name: 'Grave Wisp', icon: 'en-wisp', hp: 74, loopFrom: 0, intents: [{ ghost: true, buff: 2 }, { atk: 14 }, { atk: 7, hits: 2 }],
               about: 'When it fades, every hit deals only 1. Use those turns to set up, Block and Poison.' },
-  sentinel: { name: 'Sentinel', icon: '🗿', hp: 100, loopFrom: 0, intents: [{ block: 16, atk: 8 }, { atk: 17 }, { atk: 6, hits: 3 }],
+  sentinel: { name: 'Sentinel', icon: 'en-sentinel', hp: 100, loopFrom: 0, intents: [{ block: 16, atk: 8 }, { atk: 17 }, { atk: 6, hits: 3 }],
               about: 'Hides behind thick Block. Vulnerable cracks it.' },
-  nob:      { name: 'Gremlin Nob', icon: '👹', hp: 120, loopFrom: 1, intents: [{ buff: 4 }, { atk: 18 }, { atk: 9, hits: 2 }, { block: 12, atk: 6 }],
+  nob:      { name: 'Gremlin Nob', icon: 'en-nob', hp: 120, loopFrom: 1, intents: [{ buff: 4 }, { atk: 18 }, { atk: 9, hits: 2 }, { block: 12, atk: 6 }],
               about: 'Elite. Hits very hard once it has bulked up.' },
-  knight:   { name: 'Hollow Knight', icon: '⚜️', hp: 130, loopFrom: 0, intents: [{ block: 18, atk: 8 }, { atk: 20 }, { block: 14, buff: 2 }, { atk: 10, hits: 2 }],
+  knight:   { name: 'Hollow Knight', icon: 'en-knight', hp: 130, loopFrom: 0, intents: [{ block: 18, atk: 8 }, { atk: 20 }, { block: 14, buff: 2 }, { atk: 10, hits: 2 }],
               about: 'Elite. Huge Block every other turn: hit it when it is open.' },
-  bell:     { name: 'The Hollow Bell', icon: '🔔', hp: 250, loopFrom: 0, intents: [{ atk: 9, hits: 2 }, { block: 20, buff: 3 }, { charge: true }, { atk: 40 }, { atk: 14 }],
+  bell:     { name: 'The Hollow Bell', icon: 'en-bell', hp: 250, loopFrom: 0, intents: [{ atk: 9, hits: 2 }, { block: 20, buff: 3 }, { charge: true }, { atk: 40 }, { atk: 14 }],
               about: 'The boss. When it tolls, a 40-damage strike comes next turn: Block together!' },
 };
 export const POOLS = { early: ['slime', 'bat', 'crab', 'cultist'], late: ['sentinel', 'hexer', 'wisp', 'crab'], elite: ['nob', 'knight'] };
 
 export const RELICS = {
-  lantern:   { name: 'Lantern', icon: '🏮', text: 'Both start each fight with +1 energy on turn 1.' },
-  anchor:    { name: 'Anchor', icon: '⚓', text: 'Start each fight with 10 Block.' },
-  ring:      { name: 'Bond Ring', icon: '💍', text: 'Every combo heals the party 2.' },
-  whetstone: { name: 'Whetstone', icon: '🪨', text: 'Party +1 Strength for the rest of the run.' },
-  bells:     { name: 'Twin Bells', icon: '🎐', text: 'The first combo each turn also deals 5.' },
-  quill:     { name: 'Quill', icon: '🪶', text: 'Both draw 6 cards a turn instead of 5.' },
-  drum:      { name: 'War Drum', icon: '🥁', text: 'Party +2 Strength on the first turn of each fight.' },
-  vial:      { name: 'Healing Vial', icon: '🧪', text: 'Heal 6 after every fight.' },
-  compass:   { name: 'Compass', icon: '🧭', text: 'Card rewards offer 4 cards instead of 3.' },
+  lantern:   { name: 'Lantern', icon: 'rl-lantern', text: 'Both start each fight with +1 energy on turn 1.' },
+  anchor:    { name: 'Anchor', icon: 'rl-anchor', text: 'Start each fight with 10 Block.' },
+  ring:      { name: 'Bond Ring', icon: 'rl-ring', text: 'Every combo heals the party 2.' },
+  whetstone: { name: 'Whetstone', icon: 'rl-whetstone', text: 'Party +1 Strength for the rest of the run.' },
+  bells:     { name: 'Twin Bells', icon: 'rl-bells', text: 'The first combo each turn also deals 5.' },
+  quill:     { name: 'Quill', icon: 'rl-quill', text: 'Both draw 6 cards a turn instead of 5.' },
+  drum:      { name: 'War Drum', icon: 'rl-drum', text: 'Party +2 Strength on the first turn of each fight.' },
+  vial:      { name: 'Healing Vial', icon: 'rl-vial', text: 'Heal 6 after every fight.' },
+  compass:   { name: 'Compass', icon: 'rl-compass', text: 'Card rewards offer 4 cards instead of 3.' },
 };
 
 // ? rooms: both players must agree on an option.
 export const EVENTS = {
-  shrine:  { icon: '⛩️', title: 'A cracked shrine', text: 'Moss covers an old shrine. It hums when you come near.',
+  shrine:  { icon: 'ev-shrine', title: 'A cracked shrine', text: 'Moss covers an old shrine. It hums when you come near.',
              options: [{ id: 'pray', label: 'Pray', desc: 'Heal 15.' }, { id: 'bleed', label: 'Offer blood', desc: 'Lose 8 HP. Each of you upgrades a random card.' }] },
-  tinker:  { icon: '🧰', title: 'A wandering tinker', text: '"I can lighten your load, or sell you a trinket."',
+  tinker:  { icon: 'ev-tinker', title: 'A wandering tinker', text: '"I can lighten your load, or sell you a trinket."',
              options: [{ id: 'thin', label: 'Lighten the load', desc: 'The Warden loses a Guard and the Striker a Strike.' }, { id: 'buy', label: 'Buy a trinket', desc: 'Lose 12 HP. Gain a random relic.' }, { id: 'leave', label: 'Move on', desc: 'Nothing happens.' }] },
-  library: { icon: '📚', title: 'A dusty library', text: 'Two books lie open on a lectern, as if waiting for you.',
+  library: { icon: 'ev-library', title: 'A dusty library', text: 'Two books lie open on a lectern, as if waiting for you.',
              options: [{ id: 'study', label: 'Study together', desc: 'Each of you adds a random card to your deck.' }, { id: 'nap', label: 'Nap in the stacks', desc: 'Heal 10 and Max HP +4.' }] },
-  dice:    { icon: '🎲', title: 'Goblin dice', text: 'A goblin rattles a cup. "Double or nothing?"',
+  dice:    { icon: 'ev-dice', title: 'Goblin dice', text: 'A goblin rattles a cup. "Double or nothing?"',
              options: [{ id: 'roll', label: 'Roll', desc: 'Even: gain a relic. Odd: lose 10 HP.' }, { id: 'walk', label: 'Walk away', desc: 'Nothing happens.' }] },
-  well:    { icon: '🪣', title: 'A wishing well', text: 'Coins glitter far below.',
+  well:    { icon: 'ev-well', title: 'A wishing well', text: 'Coins glitter far below.',
              options: [{ id: 'wish', label: 'Make a wish', desc: 'Party +1 Strength for the run. Max HP −6.' }, { id: 'drink', label: 'Drink', desc: 'Heal 20.' }] },
 };
 
@@ -193,10 +194,11 @@ export const LAYOUT = [
   ['boss'],
 ];
 
+// A hint's id names its sprite: art('h-' + id).
 export const HINTS = [
-  { e: '⚔️', t: "I'll attack" },
-  { e: '🛡️', t: "I'll block" },
-  { e: '🎯', t: "I'll set up" },
-  { e: '💪', t: 'Go big!' },
-  { e: '❓', t: 'What do you need?' },
+  { id: 'attack', t: "I'll attack" },
+  { id: 'block', t: "I'll block" },
+  { id: 'setup', t: "I'll set up" },
+  { id: 'big', t: 'Go big!' },
+  { id: 'ask', t: 'What do you need?' },
 ];

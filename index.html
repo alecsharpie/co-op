@@ -4,51 +4,61 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Co-op</title>
+<link rel="icon" href="lighthouse/emblem.svg" type="image/svg+xml">
 <link rel="stylesheet" href="shared/theme.css">
 <style>
-  body { display: grid; place-items: center; padding: 24px 16px; }
-  .wrap { max-width: 720px; width: 100%; display: flex; flex-direction: column; gap: 16px; }
-  h1 { margin: 0; font-size: 40px; }
-  .game { display: flex; gap: 16px; align-items: center; padding: 18px; border-radius: 18px; background: var(--bg-2); border: 1px solid var(--line); flex-wrap: wrap; }
-  .game .ico { font-size: 48px; }
-  .game .txt { flex: 1; min-width: 200px; }
-  .game h2 { margin: 0 0 4px; }
-  .game p { margin: 0; color: var(--ink-2); }
-  .game.soon { opacity: .45; }
+  body { padding: 32px 16px; height: auto; min-height: 100%; background: radial-gradient(1200px 600px at 50% -10%, #1b2d52 0%, var(--bg) 60%); }
+  .wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+  header { display: flex; align-items: center; gap: 16px; }
+  header h1 { margin: 0; font-size: 46px; }
+  .sub { color: var(--ink-2); font-size: 18px; margin: 0; }
+  .games { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+  .game { display: flex; flex-direction: column; gap: 12px; padding: 22px; border-radius: 22px; background: var(--bg-2); border: 1px solid var(--line); transition: transform .15s, border-color .15s; }
+  .game:hover { transform: translateY(-3px); border-color: var(--accent); }
+  .game .top { display: flex; align-items: center; gap: 14px; }
+  .game img { width: 72px; height: 72px; flex: none; }
+  .game h2 { margin: 0; font-size: 26px; line-height: 1.1; }
+  .game p { margin: 0; color: var(--ink-2); font-size: 17px; line-height: 1.4; flex: 1; }
+  .game .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .game .row .btn { flex: 1; min-width: 130px; }
   a.btn { display: inline-grid; place-items: center; text-decoration: none; }
-  .sub { color: var(--ink-2); }
+  .foot { color: var(--ink-2); font-size: 15px; }
+  .foot a { color: var(--accent); }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Co-op</h1>
-  <div class="sub">Open a game on the laptop or TV, then join from both phones. Four prototypes to try, one evening each.</div>
-  <div class="game">
-    <div class="ico">🗼</div>
-    <div class="txt"><h2>Lighthouse &amp; Navigator</h2><p>One of you sees the whole bay, the other steers through the fog.</p></div>
-    <a class="btn go" href="lighthouse/board.html">Open the board</a>
-    <a class="btn" href="lighthouse/hand.html">Join on a phone</a>
+  <header>
+    <span id="mark"></span>
+    <div><h1>Co-op</h1><p class="sub">Open a game on the laptop or TV, then join from both phones.</p></div>
+  </header>
+  <div class="games">
+    <div class="game">
+      <div class="top"><img src="lighthouse/emblem.svg" alt=""><h2>Lighthouse &amp; Navigator</h2></div>
+      <p>One of you sees the whole bay, the other steers through the fog.</p>
+      <div class="row"><a class="btn go" href="lighthouse/board.html">Open the board</a><a class="btn" href="lighthouse/hand.html">Join on a phone</a></div>
+    </div>
+    <div class="game">
+      <div class="top"><img src="escape/emblem.svg" alt=""><h2>Split-Vision Escape Room</h2></div>
+      <p>Each phone holds half the clues. Describe, cross-reference, escape.</p>
+      <div class="row"><a class="btn go" href="escape/board.html">Open the board</a><a class="btn" href="escape/hand.html">Join on a phone</a></div>
+    </div>
+    <div class="game">
+      <div class="top"><img src="garden/emblem.svg" alt=""><h2>Two-Keeper Garden</h2></div>
+      <p>Grow and cook in secret, then watch the day play out. One of you knows the weather, the other the orders.</p>
+      <div class="row"><a class="btn go" href="garden/board.html">Open the board</a><a class="btn" href="garden/hand.html">Join on a phone</a></div>
+    </div>
+    <div class="game">
+      <div class="top"><img src="spire/emblem.svg" alt=""><h2>Co-op Spire</h2></div>
+      <p>Two decks, one enemy. Pick cards in secret, reveal together, land the combo.</p>
+      <div class="row"><a class="btn go" href="spire/board.html">Open the board</a><a class="btn" href="spire/hand.html">Join on a phone</a></div>
+    </div>
   </div>
-  <div class="game">
-    <div class="ico">🔐</div>
-    <div class="txt"><h2>Split-Vision Escape Room</h2><p>Each phone holds half the clues. Describe, cross-reference, escape.</p></div>
-    <a class="btn go" href="escape/board.html">Open the board</a>
-    <a class="btn" href="escape/hand.html">Join on a phone</a>
-  </div>
-  <div class="game">
-    <div class="ico">🌻</div>
-    <div class="txt"><h2>Two-Keeper Garden</h2><p>Grow and cook in secret, then watch the day play out. One of you knows the weather, the other the orders.</p></div>
-    <a class="btn go" href="garden/board.html">Open the board</a>
-    <a class="btn" href="garden/hand.html">Join on a phone</a>
-  </div>
-  <div class="game">
-    <div class="ico">🃏</div>
-    <div class="txt"><h2>Co-op Spire</h2><p>Two decks, one enemy. Pick cards in secret, reveal together, land the combo.</p></div>
-    <a class="btn go" href="spire/board.html">Open the board</a>
-    <a class="btn" href="spire/hand.html">Join on a phone</a>
-  </div>
-  <div class="game soon"><div class="ico">🗺️</div><div class="txt"><h2>For the King-lite</h2><p>Later.</p></div></div>
-  <div class="sub">Developing? <a href="dev.html" style="color:var(--accent)">dev.html</a> runs the board and both hands in one tab, no server.</div>
+  <p class="foot">Trying things out? <a href="dev.html">dev.html</a> shows the board and both phones in one tab (add <code>?game=escape</code>, <code>garden</code> or <code>spire</code>).</p>
 </div>
+<script type="module">
+import { art } from './shared/art.js';
+document.getElementById('mark').innerHTML = art('partner', { size: 64 });
+</script>
 </body>
 </html>

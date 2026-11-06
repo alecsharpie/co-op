@@ -1,38 +1,77 @@
-/* The bay, drawn by draw.js. --t is the tile size. */
-.board { position: relative; border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 2px var(--line); flex: none; }
-.board .tiles { display: grid; grid-template-columns: repeat(auto-fill, var(--t)); width: 100%; height: 100%; }
-.t { width: var(--t); height: var(--t); display: grid; place-items: center; font-size: calc(var(--t) * .6); line-height: 1; transition: background .3s; }
-.t.water { background: var(--water); }
-.t.water.misty { background: linear-gradient(135deg, #2a5878, #36627f); }
-.t.cur { background: var(--water-2); color: #bfe3ff; font-weight: 900; font-size: calc(var(--t) * .7); }
-.t.rock { background: var(--rock); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25); }
-.t.rock.reef { background: #6b5a4a; }
-.t.lamp { background: var(--rock); }
-.t.harbor { background: #2f6b4a; }
-.t.dark { background: var(--fog); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .025); }
-.t.mist { background: repeating-linear-gradient(135deg, #59647a 0 6px, #66718a 6px 12px); opacity: .9; }
-.t.lit { box-shadow: inset 0 0 0 999px rgba(255, 214, 120, .16), inset 0 0 0 1px rgba(255, 214, 120, .45); }
-.t.water.lit, .t.cur.lit { background: #2d6f9e; }
-.t.sonar { box-shadow: inset 0 0 0 2px rgba(120, 255, 200, .55); }
+/* The bay, drawn by draw.js. --t is the tile size. Artwork is in art.js; colours below are its --lh-* tokens. */
+:root {
+  --lh-sea: #1d4f7a; --lh-sea-2: #23608f; --lh-lit: #3a80b0;
+  --water: var(--lh-sea); --water-2: var(--lh-sea-2);
+}
+.board { position: relative; border-radius: 14px; overflow: hidden; box-shadow: 0 0 0 3px var(--line), 0 18px 40px rgba(0, 0, 0, .45); flex: none; background: var(--lh-sea); }
+.board > div { position: absolute; inset: 0; }
+/* one sea under every tile, with drifting wave crests */
+.board .sea {
+  background-color: var(--lh-sea);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cpath d='M6 20 q5 -4 10 0 t10 0' stroke='%2364a8d8' stroke-width='2.5' fill='none' stroke-linecap='round' opacity='.55'/%3E%3Cpath d='M36 48 q5 -4 10 0 t10 0' stroke='%2364a8d8' stroke-width='2.5' fill='none' stroke-linecap='round' opacity='.4'/%3E%3C/svg%3E");
+  background-size: calc(var(--t) * 2) calc(var(--t) * 2);
+  animation: sea-drift 14s linear infinite;
+}
+@keyframes sea-drift { to { background-position: calc(var(--t) * 2) calc(var(--t) * -1); } }
+.board .tiles { display: grid; grid-template-columns: repeat(auto-fill, var(--t)); }
+.board .beam, .board .tokens { pointer-events: none; }
 
-.tok { position: absolute; left: 0; top: 0; width: var(--t); height: var(--t); display: grid; place-items: center; font-size: calc(var(--t) * .72); transition: transform .45s ease-in-out; pointer-events: none; }
-.tok .badge { position: absolute; right: 2px; bottom: 0; font-size: calc(var(--t) * .38); font-weight: 900; color: #fff; text-shadow: 0 0 3px #000, 0 0 3px #000; }
-.tok.ghost::after { content: ''; width: 34%; height: 34%; border-radius: 50%; border: 2px dashed #d8f1ff; opacity: .85; }
+.t { width: var(--t); height: var(--t); display: grid; place-items: center; line-height: 1; transition: background .5s, box-shadow .5s; position: relative; }
+.t > svg, .t > .flow > svg { width: 100%; height: 100%; }
+.t.water, .t.cur, .t.rock, .t.reef, .t.harbor, .t.lamp { background: transparent; }
+.t.water.misty { background: rgba(160, 175, 200, .18); }
+.t.dark { background: var(--fog); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .03); }
+.t.mist { background: rgba(120, 132, 156, .55); }
+.t.lit { background: rgba(255, 226, 122, .16); box-shadow: inset 0 0 0 1px rgba(255, 226, 122, .3); }
+.t.sonar::after { content: ''; position: absolute; inset: 3px; border-radius: 6px; box-shadow: inset 0 0 0 2px rgba(111, 240, 189, .7); }
+.t.lamp::before { content: ''; position: absolute; left: 50%; top: 18%; width: 140%; height: 140%; translate: -50% -50%; border-radius: 50%; background: radial-gradient(circle, rgba(255, 226, 122, .55), rgba(255, 226, 122, 0) 65%); animation: glow 2.6s ease-in-out infinite; }
+.t.lamp > svg { position: relative; }
+@keyframes glow { 50% { opacity: .55; scale: .85; } }
+/* currents: chevrons rotate to their direction and flow along it */
+.t.cur .flow { width: 100%; height: 100%; display: block; overflow: hidden; }
+.t.cur.n .flow { rotate: -90deg; } .t.cur.s .flow { rotate: 90deg; } .t.cur.w .flow { rotate: 180deg; }
+.t.cur .flow svg { animation: flow 1.6s ease-in-out infinite; }
+@keyframes flow { 0% { translate: -18% 0; opacity: .25; } 50% { opacity: 1; } 100% { translate: 18% 0; opacity: .25; } }
+
+/* the lamp: a soft ray from the lighthouse and a pool of light on the target */
+.beam .ray { position: absolute; transform-origin: 0 50%; opacity: 0; transition: transform .9s cubic-bezier(.45, .05, .25, 1), width .9s cubic-bezier(.45, .05, .25, 1), opacity .5s;
+  clip-path: polygon(0 44%, 100% 0, 100% 100%, 0 56%); background: linear-gradient(90deg, rgba(255, 236, 160, .5), rgba(255, 226, 122, .12) 85%, rgba(255, 226, 122, 0)); mix-blend-mode: screen; }
+.beam .pool { position: absolute; opacity: 0; border-radius: 22%; transition: left .9s cubic-bezier(.45, .05, .25, 1), top .9s cubic-bezier(.45, .05, .25, 1), opacity .5s;
+  background: radial-gradient(circle, rgba(255, 236, 160, .38), rgba(255, 226, 122, .12) 60%, rgba(255, 226, 122, 0) 72%); mix-blend-mode: screen; }
+
+.tok { position: absolute; left: 0; top: 0; width: var(--t); height: var(--t); display: grid; place-items: center; transition: transform .5s cubic-bezier(.45, .05, .3, 1); pointer-events: none; }
+.tok > span, .tok > svg { width: 92%; height: 92%; display: grid; place-items: center; }
+.tok > span > svg { width: 100%; height: 100%; }
+.tok .badge { position: absolute; right: 1px; bottom: -2px; width: auto; height: auto; font-family: var(--font-display); font-size: calc(var(--t) * .36); font-weight: 700; color: #fff; text-shadow: 0 0 3px #000, 0 0 3px #000, 0 0 3px #000; }
+.bob.slow { animation-duration: 3.6s; }
+.tok.ghost::after { content: ''; width: 38%; height: 38%; border-radius: 50%; border: 2.5px dashed #d8f1ff; opacity: .85; animation: pulse 1.4s ease-in-out infinite; }
 .tok.floe { z-index: 3; }
-.tok.floe.last { opacity: .45; filter: grayscale(.4); }
-.tok.boat { z-index: 4; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .5)); }
-.tok.buoy { z-index: 1; font-size: calc(var(--t) * .42); }
-.tok.buoy.aim { opacity: .6; animation: bob 1s ease-in-out infinite alternate; }
-.tok.wake::after { content: ''; width: 18%; height: 18%; border-radius: 50%; background: rgba(255, 255, 255, .55); }
-.tok.mark { z-index: 5; animation: pop .5s ease-out; }
-@keyframes pop { from { scale: .2; opacity: 0; } }
-@keyframes bob { to { margin-top: -4px; } }
-.board.shake { animation: shake .35s; }
-@keyframes shake { 25% { translate: -6px 0; } 75% { translate: 6px 0; } }
+.tok.floe.last { opacity: .42; filter: grayscale(.5); }
+.tok.boat { z-index: 4; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .45)); }
+.tok.boat.face-w > span { scale: -1 1; }
+.tok.buoy { z-index: 2; }
+.tok.buoy > span, .tok.buoy > svg { width: 70%; height: 70%; }
+.tok.buoy.aim { opacity: .6; animation: pulse 1s ease-in-out infinite; }
+.tok.wake::after { content: ''; width: 26%; height: 12%; border-radius: 50%; border-top: 2.5px solid rgba(223, 243, 255, .7); animation: wake 2.4s ease-out infinite; }
+@keyframes wake { 50% { scale: 1.4; opacity: .5; } }
+.tok.mark { z-index: 5; animation: mark-pop .5s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes mark-pop { from { scale: .1; opacity: 0; rotate: -40deg; } }
+.tok.ripple { z-index: 1; }
+.tok.ripple i { position: absolute; width: calc(var(--t) * 5); height: calc(var(--t) * 5); border-radius: 50%; border: 3px solid rgba(111, 240, 189, .8); opacity: 0; animation: ripple 2.2s ease-out 3; }
+.tok.ripple i:nth-child(2) { animation-delay: .35s; } .tok.ripple i:nth-child(3) { animation-delay: .7s; }
+@keyframes ripple { 0% { scale: .1; opacity: .95; } 100% { scale: 1; opacity: 0; } }
+.board.shake { animation: shake .4s; }
+@keyframes shake { 20% { translate: -8px 2px; } 40% { translate: 7px -2px; } 60% { translate: -5px 1px; } 80% { translate: 3px 0; } }
 
 /* legend */
-.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 15px; color: var(--ink-2); align-items: center; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 15px; color: var(--ink-2); align-items: center; }
 .legend .lg { display: inline-flex; align-items: center; gap: 6px; }
-.legend .sw { --t: 22px; border-radius: 5px; font-size: 14px; }
-.legend .faded { opacity: .45; filter: grayscale(.4); }
+.legend .sw { --t: 22px; width: 22px; height: 22px; border-radius: 6px; display: inline-grid; place-items: center; }
+.legend .sw.t { background: var(--lh-sea); }
+.legend .sw.t.lit { background: var(--lh-lit); }
+.legend .sw.t.dark { background: var(--fog); box-shadow: inset 0 0 0 1px var(--line); }
+.legend .faded { opacity: .42; filter: grayscale(.5); }
 .legend .ring { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px dashed #d8f1ff; }
+
+/* floating "-1" when the hull takes a knock */
+.fx-pop.bad { color: var(--bad); }

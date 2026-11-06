@@ -29,7 +29,10 @@ export function art(name, { size = 24, cls = '', label = '' } = {}) {
 export const hasArt = name => name in sprites;
 
 // common strokes and fills, so sprite strings stay short
-export const LINE = 'stroke="var(--art-line, #131a2c)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"';
+// An outline with its own width and colour. Use this rather than LINE plus another stroke attribute: an SVG element
+// keeps only the first of two duplicate attributes.
+export const line = (w = 3, colour = 'var(--art-line, #131a2c)') => `stroke="${colour}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
+export const LINE = line();
 export const SHINE = 'fill="#fff" opacity=".3"';
 
 // A star polygon's points (for stars, sparkles, badges).
@@ -49,19 +52,19 @@ defineArt({
   check: `<circle cx="32" cy="32" r="24" fill="var(--art-good, #5fd39a)" ${LINE}/><path d="M21 33 L29 41 L44 24" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`,
   cross: `<circle cx="32" cy="32" r="24" fill="var(--art-bad, #ff7a6b)" ${LINE}/><path d="M23 23 L41 41 M41 23 L23 41" stroke="#fff" stroke-width="6" stroke-linecap="round"/>`,
   question: `<circle cx="32" cy="32" r="24" fill="var(--art-blue, #5aa6ff)" ${LINE}/><path d="M25 26 a7.5 7.5 0 1 1 11 6.5 c-3 1.8 -4 3 -4 6.5" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round"/><circle cx="32" cy="46" r="3.4" fill="#fff"/>`,
-  lock: `<path d="M22 30 V22 a10 10 0 0 1 20 0 V30" fill="none" ${LINE} stroke-width="6"/><path d="M22 30 V22 a10 10 0 0 1 20 0 V30" fill="none" stroke="var(--art-steel, #c9d3e6)" stroke-width="3"/><rect x="14" y="28" width="36" height="28" rx="7" fill="var(--art-gold, #ffcf5a)" ${LINE}/><circle cx="32" cy="40" r="4" fill="var(--art-line, #131a2c)"/><path d="M32 42 V48" stroke="var(--art-line, #131a2c)" stroke-width="4" stroke-linecap="round"/><rect x="18" y="31" width="12" height="5" rx="2.5" ${SHINE}/>`,
-  unlock: `<path d="M22 30 V22 a10 10 0 0 1 19 -4" fill="none" ${LINE} stroke-width="6"/><path d="M22 30 V22 a10 10 0 0 1 19 -4" fill="none" stroke="var(--art-steel, #c9d3e6)" stroke-width="3"/><rect x="14" y="28" width="36" height="28" rx="7" fill="var(--art-good, #5fd39a)" ${LINE}/><circle cx="32" cy="40" r="4" fill="var(--art-line, #131a2c)"/><path d="M32 42 V48" stroke="var(--art-line, #131a2c)" stroke-width="4" stroke-linecap="round"/><rect x="18" y="31" width="12" height="5" rx="2.5" ${SHINE}/>`,
+  lock: `<path d="M22 30 V22 a10 10 0 0 1 20 0 V30" fill="none" ${line(6)}/><path d="M22 30 V22 a10 10 0 0 1 20 0 V30" fill="none" stroke="var(--art-steel, #c9d3e6)" stroke-width="3"/><rect x="14" y="28" width="36" height="28" rx="7" fill="var(--art-gold, #ffcf5a)" ${LINE}/><circle cx="32" cy="40" r="4" fill="var(--art-line, #131a2c)"/><path d="M32 42 V48" stroke="var(--art-line, #131a2c)" stroke-width="4" stroke-linecap="round"/><rect x="18" y="31" width="12" height="5" rx="2.5" ${SHINE}/>`,
+  unlock: `<path d="M22 30 V22 a10 10 0 0 1 19 -4" fill="none" ${line(6)}/><path d="M22 30 V22 a10 10 0 0 1 19 -4" fill="none" stroke="var(--art-steel, #c9d3e6)" stroke-width="3"/><rect x="14" y="28" width="36" height="28" rx="7" fill="var(--art-good, #5fd39a)" ${LINE}/><circle cx="32" cy="40" r="4" fill="var(--art-line, #131a2c)"/><path d="M32 42 V48" stroke="var(--art-line, #131a2c)" stroke-width="4" stroke-linecap="round"/><rect x="18" y="31" width="12" height="5" rx="2.5" ${SHINE}/>`,
   star: `<polygon points="${starPoints(32, 34, 26, 11)}" fill="var(--art-gold, #ffcf5a)" ${LINE}/><polygon points="${starPoints(27, 27, 7, 3)}" ${SHINE}/>`,
-  'star-empty': `<polygon points="${starPoints(32, 34, 26, 11)}" fill="var(--art-empty, rgba(255,255,255,.06))" ${LINE} stroke="var(--art-empty-line, #5a6d94)"/>`,
+  'star-empty': `<polygon points="${starPoints(32, 34, 26, 11)}" fill="var(--art-empty, rgba(255,255,255,.06))" ${line(3, 'var(--art-empty-line, #5a6d94)')}/>`,
   sparkle: `<polygon points="${starPoints(32, 32, 28, 7, 4, 0)}" fill="var(--art-gold, #ffe9a3)"/>`,
   heart: `<path d="M32 54 C12 41 7 30 12 21 C17 13 27 14 32 22 C37 14 47 13 52 21 C57 30 52 41 32 54Z" fill="var(--art-heart, #ff6b7d)" ${LINE}/><path d="M17 23 C19 19 23 18 26 20" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".45"/>`,
-  'heart-empty': `<path d="M32 54 C12 41 7 30 12 21 C17 13 27 14 32 22 C37 14 47 13 52 21 C57 30 52 41 32 54Z" fill="var(--art-empty, rgba(255,255,255,.06))" ${LINE} stroke="var(--art-empty-line, #5a6d94)"/>`,
+  'heart-empty': `<path d="M32 54 C12 41 7 30 12 21 C17 13 27 14 32 22 C37 14 47 13 52 21 C57 30 52 41 32 54Z" fill="var(--art-empty, rgba(255,255,255,.06))" ${line(3, 'var(--art-empty-line, #5a6d94)')}/>`,
   partner: `<circle cx="23" cy="22" r="9" fill="var(--art-warm, #ffb36b)" ${LINE}/><path d="M8 52 a15 14 0 0 1 30 0 Z" fill="var(--art-warm, #ffb36b)" ${LINE}/><circle cx="42" cy="24" r="9" fill="var(--art-cool, #7cc6ff)" ${LINE}/><path d="M27 54 a15 14 0 0 1 30 0 Z" fill="var(--art-cool, #7cc6ff)" ${LINE}/>`,
   bulb: `<path d="M32 8 a17 17 0 0 1 10 31 c-2 2 -3 4 -3 7 H25 c0 -3 -1 -5 -3 -7 A17 17 0 0 1 32 8Z" fill="var(--art-gold, #ffe27a)" ${LINE}/><rect x="24" y="46" width="16" height="9" rx="3" fill="var(--art-steel, #c9d3e6)" ${LINE}/><path d="M24 18 a10 10 0 0 1 8 -4" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".5"/>`,
-  sound: `<path d="M10 25 H20 L32 14 V50 L20 39 H10 Z" fill="var(--art-arrow, #e8eef9)" ${LINE}/><path d="M40 24 a11 11 0 0 1 0 16 M46 18 a19 19 0 0 1 0 28" fill="none" ${LINE} stroke="var(--art-arrow, #e8eef9)" stroke-width="4"/>`,
+  sound: `<path d="M10 25 H20 L32 14 V50 L20 39 H10 Z" fill="var(--art-arrow, #e8eef9)" ${LINE}/><path d="M40 24 a11 11 0 0 1 0 16 M46 18 a19 19 0 0 1 0 28" fill="none" ${line(4, 'var(--art-arrow, #e8eef9)')}/>`,
   mute: `<path d="M10 25 H20 L32 14 V50 L20 39 H10 Z" fill="var(--art-arrow, #e8eef9)" ${LINE}/><path d="M40 25 L54 39 M54 25 L40 39" stroke="var(--art-bad, #ff7a6b)" stroke-width="5" stroke-linecap="round"/>`,
   'arrow-n': arrow(0), 'arrow-e': arrow(90), 'arrow-s': arrow(180), 'arrow-w': arrow(270),
-  undo: `<path d="M20 22 H38 a13 13 0 0 1 0 26 H26" fill="none" ${LINE} stroke-width="9"/><path d="M20 22 H38 a13 13 0 0 1 0 26 H26" fill="none" stroke="var(--art-arrow, #e8eef9)" stroke-width="4" stroke-linecap="round"/><path d="M8 22 L22 10 V34 Z" fill="var(--art-arrow, #e8eef9)" ${LINE}/>`,
+  undo: `<path d="M20 22 H38 a13 13 0 0 1 0 26 H26" fill="none" ${line(9)}/><path d="M20 22 H38 a13 13 0 0 1 0 26 H26" fill="none" stroke="var(--art-arrow, #e8eef9)" stroke-width="4" stroke-linecap="round"/><path d="M8 22 L22 10 V34 Z" fill="var(--art-arrow, #e8eef9)" ${LINE}/>`,
   wait: `<rect x="17" y="14" width="11" height="36" rx="4" fill="var(--art-arrow, #e8eef9)" ${LINE}/><rect x="36" y="14" width="11" height="36" rx="4" fill="var(--art-arrow, #e8eef9)" ${LINE}/>`,
   dot: `<circle cx="32" cy="32" r="12" fill="currentColor"/>`,
 });

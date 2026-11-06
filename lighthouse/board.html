@@ -8,59 +8,84 @@
 <link rel="stylesheet" href="tiles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <style>
-  body { display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
-  header { display: flex; align-items: center; gap: 14px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--bg-2); }
-  header h1 { margin: 0; font-size: 22px; }
+  body { display: grid; grid-template-rows: auto 1fr; overflow: hidden; background: radial-gradient(ellipse at 30% 0%, #16284a, var(--bg) 60%); }
+  header { display: flex; align-items: center; gap: 14px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: rgba(19, 32, 58, .85); }
+  header h1 { margin: 0; font-size: 24px; display: flex; align-items: center; gap: 10px; }
   header .bay { color: var(--ink-2); font-size: 18px; }
   header .sp { flex: 1; }
+  .icon-btn { width: 44px; height: 44px; padding: 0; display: grid; place-items: center; border-radius: 50%; border: 2px solid var(--line); background: var(--panel); cursor: pointer; }
   main { display: grid; grid-template-columns: 1fr 360px; min-height: 0; }
   .left { display: flex; flex-direction: column; min-height: 0; padding: 14px 18px; gap: 12px; }
-  #banner { display: flex; align-items: center; gap: 16px; padding: 14px 18px; border-radius: var(--radius); background: var(--panel); border: 2px solid var(--accent); }
-  #banner .who { font-size: 44px; line-height: 1; }
-  #banner .what { font-size: 26px; font-weight: 750; }
-  #banner .tip { font-size: 18px; color: var(--ink-2); margin-top: 4px; }
-  #banner.sail { border-color: var(--line); }
+  #banner { display: flex; align-items: center; gap: 16px; padding: 12px 18px; border-radius: 18px; background: var(--panel); border: 2px solid var(--accent); box-shadow: 0 0 24px rgba(255, 207, 90, .12); }
+  #banner .who { flex: none; }
+  #banner .what { font-family: var(--font-display); font-size: 27px; font-weight: 600; }
+  #banner .tip { font-size: 18px; color: var(--ink-2); margin-top: 2px; }
+  #banner.sail { border-color: var(--line); box-shadow: none; }
+  #banner.flash { animation: banner-in .6s cubic-bezier(.3, 1.5, .5, 1); }
+  @keyframes banner-in { from { transform: translateY(-10px) scale(.97); opacity: .3; } }
   #sea { flex: 1; min-height: 0; position: relative; overflow: hidden; }
   #sea .board { position: absolute; inset: 0; margin: auto; } /* sized from #sea, so it must not size #sea */
-  aside { border-left: 1px solid var(--line); padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; overflow: auto; background: var(--bg-2); }
+  aside { border-left: 1px solid var(--line); padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; overflow: auto; background: rgba(19, 32, 58, .7); }
   .stat { display: flex; justify-content: space-between; align-items: center; font-size: 19px; gap: 10px; }
-  .stat b { font-size: 24px; white-space: nowrap; }
-  .meter { display: flex; gap: 3px; flex: 1; max-width: 170px; }
-  .meter i { flex: 1; height: 14px; border-radius: 4px; background: var(--accent); }
-  .meter i.out { background: var(--line); }
-  .sub { color: var(--ink-2); font-size: 15px; }
+  .stat .lab { display: inline-flex; align-items: center; gap: 8px; }
+  .stat b { font-family: var(--font-display); font-size: 22px; white-space: nowrap; }
+  .meter { display: flex; gap: 3px; flex: 1; max-width: 150px; }
+  .meter i { flex: 1; height: 14px; border-radius: 4px; background: var(--accent); box-shadow: 0 0 8px rgba(255, 207, 90, .4); transition: background .4s, box-shadow .4s; }
+  .meter i.out { background: var(--line); box-shadow: none; }
+  .hearts, .starrow { display: inline-flex; gap: 2px; }
+  .hearts .lost { animation: heart-break .6s ease-out; }
+  @keyframes heart-break { 0% { scale: 1.5; } 100% { scale: 1; } }
+  .sub { color: var(--ink-2); font-size: 15px; display: inline-flex; align-items: center; gap: 4px; }
+  #extras { justify-content: flex-start; gap: 18px; font-size: 17px; flex-wrap: wrap; }
+  #extras span { display: inline-flex; align-items: center; gap: 6px; }
   .signals { display: flex; gap: 10px; }
-  .signals .sig { width: 72px; text-align: center; }
-  .signals .sig b { display: grid; place-items: center; height: 72px; font-size: 42px; border-radius: 16px; background: var(--accent); }
+  .signals .sig { width: 76px; text-align: center; animation: sig-in .45s cubic-bezier(.3, 1.6, .5, 1) backwards; }
+  .signals .sig:nth-child(2) { animation-delay: .12s; } .signals .sig:nth-child(3) { animation-delay: .24s; }
+  @keyframes sig-in { from { scale: .2; opacity: 0; } }
+  .signals .sig b { display: grid; place-items: center; height: 76px; border-radius: 18px; background: var(--accent); box-shadow: inset 0 -5px 0 rgba(0, 0, 0, .18); }
   .signals .sig span { font-size: 13px; color: var(--ink-2); }
-  h3 { margin: 0; font-size: 16px; color: var(--ink-2); font-weight: 650; }
+  h3 { margin: 0; font-size: 16px; color: var(--ink-2); }
   .log { font-size: 16px; line-height: 1.45; display: flex; flex-direction: column; gap: 6px; }
   .log .ev { padding: 6px 10px; border-radius: 10px; background: var(--panel); }
   .log .ev.bad { border-left: 4px solid var(--bad); }
   .log .ev.calm { border-left: 4px solid var(--water-2); }
+  .log .ev.good { border-left: 4px solid var(--good); }
   .log .old { color: var(--ink-2); font-size: 15px; }
   .settings { margin-top: auto; display: flex; flex-wrap: wrap; gap: 8px; }
-  .overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(5, 10, 20, .82); z-index: 10; padding: 24px; }
-  .card { max-width: 680px; text-align: center; padding: 32px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 24px; }
-  .card h2 { font-size: 40px; margin: 0 0 10px; }
-  .card p { font-size: 20px; color: var(--ink-2); }
-  .card .row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
-  .stars { font-size: 46px; letter-spacing: 6px; }
-  .why { display: flex; gap: 16px; justify-content: center; font-size: 17px; color: var(--ink-2); flex-wrap: wrap; }
-  .why .got { color: var(--ink); }
+  .settings .btn { display: inline-flex; align-items: center; gap: 6px; }
+  .overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(5, 10, 20, .8); z-index: 10; padding: 24px; }
+  .card { max-width: 700px; text-align: center; padding: 30px 34px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 28px; box-shadow: 0 30px 80px rgba(0, 0, 0, .5); animation: card-in .5s cubic-bezier(.3, 1.4, .5, 1); }
+  @keyframes card-in { from { transform: translateY(30px) scale(.9); opacity: 0; } }
+  .card h2 { font-size: 42px; margin: 6px 0 4px; }
+  .card p { font-size: 19px; color: var(--ink-2); margin: 8px 0; }
+  .card .story { font-style: italic; color: var(--ink); font-size: 20px; }
+  .card .row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+  .card .hero { display: grid; place-items: center; }
+  .bigstars { display: flex; gap: 10px; justify-content: center; margin: 6px 0 10px; }
+  .bigstars .s { display: grid; place-items: center; }
+  .bigstars .s .on { display: none; }
+  .bigstars .s.got .on { display: block; animation: star-pop .55s cubic-bezier(.3, 1.8, .5, 1); }
+  .bigstars .s.got .off { display: none; }
+  @keyframes star-pop { from { scale: .1; rotate: -60deg; } }
+  .score { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0 6px; }
+  .score div { padding: 10px; border-radius: 14px; background: var(--panel); font-size: 14px; color: var(--ink-2); }
+  .score b { display: block; font-family: var(--font-display); font-size: 28px; color: var(--ink); }
+  .score .why { color: var(--ink-2); font-size: 13px; }
   .bays { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 16px; }
-  .bays .btn { display: flex; justify-content: space-between; gap: 12px; text-align: left; font-size: 18px; }
-  .toast { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); max-width: 80%; padding: 12px 22px; border-radius: 18px; background: var(--bad); color: #fff; font-size: 22px; font-weight: 700; text-align: center; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 6; }
-  .toast.show { opacity: 1; }
+  .bays .btn { display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: left; font-size: 18px; }
+  .toast { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); max-width: 80%; padding: 12px 22px; border-radius: 18px; background: var(--bad); color: #fff; font-family: var(--font-display); font-size: 22px; font-weight: 600; text-align: center; opacity: 0; transition: opacity .2s, transform .3s; pointer-events: none; z-index: 6; box-shadow: 0 10px 30px rgba(0, 0, 0, .35); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(4px); }
   .toast.calm { background: var(--water-2); }
+  .toast.good { background: #2f8f62; }
 </style>
 </head>
 <body>
 <header>
-  <h1>🗼 Lighthouse &amp; Navigator</h1>
+  <h1><span id="logo"></span> Lighthouse &amp; Navigator</h1>
   <span class="bay" id="bay"></span>
   <span class="sp"></span>
   <button class="btn sm" id="how">How to play</button>
+  <button class="icon-btn" id="mute" aria-label="Sound on or off"></button>
   <span class="chip" id="net"><span class="dot"></span><span>connecting</span></span>
   <span class="chip" id="room"></span>
 </header>
@@ -71,9 +96,9 @@
     <div class="legend" id="legend"></div>
   </div>
   <aside>
-    <div class="stat"><span>🛢️ Lamp oil</span><span class="meter" id="oilbar"></span><b id="oil"></b></div>
-    <div class="stat"><span>Hull</span><b id="hull"></b></div>
-    <div class="stat"><span>Par</span><span class="sub" id="par"></span></div>
+    <div class="stat"><span class="lab" id="oillab"></span><span class="meter" id="oilbar"></span><b id="oil"></b></div>
+    <div class="stat"><span class="lab">Hull</span><span class="hearts" id="hull"></span></div>
+    <div class="stat"><span class="lab">Par</span><span class="sub" id="par"></span></div>
     <div class="stat" id="extras"></div>
     <div id="sigbox"><h3 style="margin-bottom:8px">Signals from the keeper</h3><div class="signals" id="signals"></div></div>
     <h3>What happened</h3>
@@ -95,38 +120,47 @@ import { hostRoom, load, save } from '../shared/net.js';
 import { renderLobby, findLan } from '../shared/lobby.js';
 import { showHelp, helpOnce } from '../shared/help.js';
 import { newTurn, submit, phaseOf, lockedIn } from '../shared/phases.js';
-import { PHASES, parseLevel, newGame, light, sail, ping, visibleDrifters, driftNext, movesAllowed, stars, parTurns, isFog, SIGNALS_PER_TURN } from './game.js';
+import { art, burst, popText } from '../shared/art.js';
+import { sfx, isMuted, setMuted } from '../shared/sfx.js';
+import { PHASES, parseLevel, newGame, light, sail, ping, visibleDrifters, driftNext, movesAllowed, stars, parTurns, isFog, inSync, SIGNALS_PER_TURN } from './game.js';
 import { LEVELS } from './levels.js';
-import { drawSea, legendHtml, SIGNAL_ICON, SIGNAL_WORD, MOVE_ICON } from './draw.js';
+import { drawSea, legendHtml, tilePoint, sigArt, SIGNAL_WORD, ARROW } from './draw.js';
 
 const $ = id => document.getElementById(id);
 const bays = LEVELS.map(parseLevel);
 const SEATS = {
-  keeper: { label: 'Keeper', icon: '🗼', blurb: 'sees the whole bay on their phone, aims the lamp' },
-  navigator: { label: 'Navigator', icon: '⛵', blurb: 'sees only what is lit on the TV, steers the boat' },
+  keeper: { label: 'Keeper', icon: art('keeper', { size: 40 }), blurb: 'sees the whole bay on their phone, aims the lamp' },
+  navigator: { label: 'Navigator', icon: art('navigator', { size: 40 }), blurb: 'sees only what is lit on the TV, steers the boat' },
 };
 
 const room = hostRoom({ game: 'lighthouse', seats: Object.keys(SEATS), onSeats: render, onAction, onStatus });
 const KEY = `coop-lighthouse-${room.room}`;
 // the save: everything needed to pick up exactly where we stopped
-let S = { level: 0, unlocked: 0, mode: 'talk', game: null, turn: newTurn(), log: [], lobby: true, stars: {}, ...load(KEY) };
+let S = { level: 0, unlocked: 0, mode: 'talk', game: null, turn: newTurn(), log: [], lobby: true, stars: {}, sync: 0, ...load(KEY) };
 if (S.game && !S.game.floeSeen) S.game = null; // a save from before the second pass: start the bay afresh
 let busy = false; // animating a sail: actions wait
+// render() can run as soon as hostRoom() exists (a phone joining), so its state is declared up here
+let lastBanner = '', lastHull = null, cardKey = '', picking = false;
 const persist = () => save(KEY, S);
 const lv = () => bays[S.level];
 const nameOf = seat => room.seat(seat)?.name || SEATS[seat].label;
+const wait = ms => new Promise(r => setTimeout(r, ms));
 
 $('room').textContent = 'Room ' + room.room;
-await findLan();
+$('logo').innerHTML = art('lighthouse', { size: 34 });
+$('oillab').innerHTML = `${art('oil', { size: 24 })} Lamp oil`;
+const drawMute = () => { $('mute').innerHTML = art(isMuted() ? 'mute' : 'sound', { size: 26 }); };
+drawMute();
 
 function onStatus(st) {
   $('net').innerHTML = `<span class="dot${st === 'open' ? ' on' : ''}"></span><span>${st === 'open' ? (room.net === 'local' ? 'local tabs' : 'online') : st}</span>`;
 }
 
 function start(level) {
-  S.level = level; S.game = newGame(bays[level]); S.turn = newTurn(); S.lobby = false;
+  S.level = level; S.game = newGame(bays[level]); S.turn = newTurn(); S.lobby = false; S.sync = 0;
   S.log = [`Bay ${level + 1}: ${bays[level].name}. ${bays[level].intro}`];
   persist(); render();
+  sfx.chime();
   helpOnce('lighthouse-board', howTo());
 }
 
@@ -141,57 +175,89 @@ function onAction(seat, a) {
     S.turn = submit(PHASES, S.turn, seat, true).turn;
     const before = S.game.buoys.length;
     S.game = light(S.game, lv(), a.beam, S.mode === 'signals' ? a.signals : [], a.buoy);
-    S.log.unshift(`Turn ${S.game.turn}: ${S.game.beam ? 'the lamp swings across the water' : 'the keeper keeps the lamp low'}${S.game.buoys.length > before ? ' and drops a buoy 🟠' : ''}.`);
+    const buoy = S.game.buoys.length > before;
+    S.log.unshift(`Turn ${S.game.turn}: ${S.game.beam ? 'the lamp swings across the water' : 'the keeper keeps the lamp low'}${buoy ? ' and drops a buoy' : ''}.`);
     persist(); render();
+    if (S.game.beam) { sfx.whoosh(); setTimeout(() => sfx.note({ f: 880, f2: 1320, type: 'sine', dur: .5, vol: .1 }), 650); }
+    if (buoy) setTimeout(() => { sfx.splash(); burst(tilePoint($('grid'), S.game.buoys.at(-1)), { count: 8, spread: 50, size: 14 }); }, 300);
+    if (S.game.signals.length) setTimeout(() => S.game.signals.forEach((_, i) => setTimeout(sfx.tick, i * 120)), 200);
   } else if (a.a === 'ping' && ph?.name === 'steer' && seat === 'navigator' && lv().sonar && !S.game.pinged) {
     S.game = ping(S.game, lv());
-    S.log.unshift(`Turn ${S.game.turn}: 📡 sonar ping.`);
-    toast('📡 Ping! The sonar sees 2 squares around the boat, fog and all.', true);
+    S.log.unshift(`Turn ${S.game.turn}: sonar ping.`);
+    toast('Ping! The sonar sees 2 squares around the boat, fog and all.', 'calm');
     persist(); render();
+    [0, .5, 1].forEach(t => sfx.note({ f: 1500, f2: 700, type: 'sine', dur: .45, vol: .14, at: t }));
   } else if (a.a === 'sail' && ph?.name === 'steer' && seat === 'navigator') {
     S.turn = submit(PHASES, S.turn, seat, true).turn;
-    play(sail(S.game, lv(), a.plan));
+    const synced = S.mode === 'signals' && inSync(S.game.signals, a.plan);
+    play(sail(S.game, lv(), a.plan), synced);
   }
 }
 
 const BAD = new Set(['bump', 'reef', 'ice']);
-async function play({ state, frames }) {
+async function play({ state, frames }, synced) {
   busy = true;
-  const before = S.game;
+  const before = S.game, grid = $('grid');
   render();
+  sfx.lock();
+  await wait(300);
   const trail = [{ ...before.boat }], marks = [];
   for (const f of frames) {
     trail.push(f.boat);
     if (BAD.has(f.event) && f.at) marks.push({ event: f.event, ...f.at });
     S.game = { ...before, boat: f.boat, drifters: f.drifters, hull: f.hull, seen: f.seen, floeSeen: f.floeSeen, trail: [...trail], marks: [...marks] };
     render();
-    if (f.text) toast(f.text, !BAD.has(f.event));
-    if (BAD.has(f.event)) { const g = $('grid'); g.classList.remove('shake'); g.offsetWidth; g.classList.add('shake'); }
-    await new Promise(r => setTimeout(r, f.text ? 1100 : 520));
+    feel(f, grid);
+    if (f.text) toast(f.text, BAD.has(f.event) ? '' : f.event === 'harbor' ? 'good' : 'calm');
+    await wait(f.text ? 1150 : 560);
   }
   S.game = state; S.turn = newTurn();
-  S.log.unshift(...state.events.map(e => ({ text: e.text, bad: BAD.has(e.event) })).reverse());
-  S.log.unshift(`Turn ${before.turn}: sailed ${state.lastPlan.map(m => MOVE_ICON[m]).join(' ') || 'nowhere'}.`);
+  S.log.unshift(...state.events.map(e => ({ text: e.text, kind: BAD.has(e.event) ? 'bad' : 'calm' })).reverse());
+  S.log.unshift(`Turn ${before.turn}: sailed ${state.lastPlan.map(m => ARROW[m]).join(' ') || 'nowhere'}.`);
+  if (synced) {
+    S.sync++;
+    S.log.unshift({ text: 'In sync! The navigator sailed exactly what the keeper signalled.', kind: 'good' });
+  }
   if (state.status === 'won') {
     S.unlocked = Math.max(S.unlocked, Math.min(S.level + 1, bays.length - 1));
     S.stars[S.level] = Math.max(S.stars[S.level] || 0, stars(state, lv()));
   }
   busy = false; persist(); render();
+  if (synced) { sfx.great(); toast('In sync! You read each other perfectly.', 'good'); burst($('banner'), { count: 18, spread: 160 }); }
+  if (state.status === 'lost') sfx.lose();
+}
+
+// Sound and sparkle for one step of a sail.
+function feel(f, grid) {
+  const at = f.at ? tilePoint(grid, f.at) : tilePoint(grid, f.boat);
+  const jolt = () => { grid.classList.remove('shake'); void grid.offsetWidth; grid.classList.add('shake'); };
+  if (f.event === 'bump' || f.event === 'reef') {
+    sfx.thud(); jolt();
+    burst(at, { count: 10, spread: 70, size: 16 });
+    popText($('hull'), '−1', 'bad');
+  } else if (f.event === 'ice') {
+    sfx.note({ f: 3200, f2: 900, type: 'noise', dur: .4, vol: .25, q: 2 }); sfx.note({ f: 1800, type: 'triangle', dur: .15, vol: .1, at: .05 });
+    jolt();
+    burst(at, { count: 12, spread: 80, size: 18, sprite: 'shatter' });
+    popText($('hull'), '−1', 'bad');
+  } else if (f.event === 'current') sfx.whoosh();
+  else if (f.event === 'harbor') { sfx.win(); burst(at, { count: 26, spread: 200, sprite: 'star', size: 26 }); setTimeout(() => burst(at, { count: 20, spread: 140 }), 300); }
+  else sfx.note({ f: 700, f2: 300, type: 'noise', dur: .22, vol: .07, q: .8 }); // a soft splash per stroke
 }
 
 let toastTimer;
-function toast(text, calm) {
-  const t = $('toast'); t.textContent = text; t.className = 'toast show' + (calm ? ' calm' : '');
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = 'toast', 2200);
+function toast(text, kind = '') {
+  const t = $('toast'); t.textContent = text; t.className = 'toast show ' + kind;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = 'toast', 2300);
 }
 
 const bothSeated = () => Object.keys(SEATS).every(s => room.seat(s));
 const tipFor = (seat, g) => (g && lv().tips[g.turn]?.[seat]) || '';
-const starStr = n => '★'.repeat(n) + '☆'.repeat(3 - n);
+const starRow = (n, size = 18) => `<span class="starrow">${[0, 1, 2].map(i => art(i < n ? 'star' : 'star-empty', { size })).join('')}</span>`;
 
 function render() {
   const g = S.game, ph = g && phaseOf(PHASES, S.turn);
-  $('mode').textContent = S.mode === 'talk' ? '🗣️ Talk freely' : '🤫 Signals only';
+  $('mode').innerHTML = S.mode === 'talk' ? 'Mode: talk freely' : `${art('danger', { size: 18 })} Signals only`;
   $('mode').title = 'Switch between talking freely and the Sky Team-style signals-only mode';
 
   $('lobby').classList.toggle('hidden', !S.lobby);
@@ -206,55 +272,80 @@ function render() {
     $('bay').textContent = `Bay ${S.level + 1} of ${bays.length}: ${L.name} · turn ${g.turn}`;
     $('oil').textContent = Math.max(0, g.oil) + ' left';
     $('oilbar').innerHTML = Array.from({ length: L.oil }, (_, i) => `<i class="${i < g.oil ? '' : 'out'}"></i>`).join('');
-    $('hull').textContent = '❤️'.repeat(Math.max(0, g.hull)) + '🖤'.repeat(Math.max(0, L.hull - g.hull));
-    $('par').textContent = `home by turn ${parTurns(L)} for ★ · best ${starStr(S.stars[S.level] || 0)}`;
+    const broke = lastHull != null && g.hull < lastHull;
+    $('hull').innerHTML = Array.from({ length: L.hull }, (_, i) => `<span class="${broke && i === g.hull ? 'lost' : ''}">${art(i < g.hull ? 'heart' : 'heart-empty', { size: 26 })}</span>`).join('');
+    lastHull = g.hull;
+    $('par').innerHTML = `home by turn ${parTurns(L)} · best ${starRow(S.stars[S.level] || 0, 16)}`;
     $('extras').innerHTML = [
-      L.buoys ? `<span>🟠 Buoys left: <b>${g.buoysLeft}</b></span>` : '',
-      L.sonar ? `<span>📡 Sonar: <b>${g.pinged ? 'used' : 'ready'}</b></span>` : '',
+      L.buoys ? `<span>${art('buoy', { size: 22 })} Buoys left: <b>${g.buoysLeft}</b></span>` : '',
+      L.sonar ? `<span>${art('sonar', { size: 22 })} Sonar: <b>${g.pinged ? 'used' : 'ready'}</b></span>` : '',
+      S.mode === 'signals' ? `<span>${art('sync', { size: 22 })} In sync: <b>${S.sync || 0}</b></span>` : '',
     ].join('');
     drawSea($('grid'), L, g, { tv: true, drifters: visibleDrifters(g, L) });
     $('legend').innerHTML = legendHtml(L, { tv: true });
 
-    const keeperTurn = ph?.name === 'light', seat = keeperTurn ? 'keeper' : 'navigator';
+    const keeperTurn = ph?.name === 'light';
     let who, what, tip;
-    if (g.status !== 'play') { who = g.status === 'won' ? '⚓' : '🌊'; what = g.why; tip = ''; }
-    else if (busy) { who = '⛵'; what = 'Sailing…'; tip = 'Watch the boat.'; }
+    if (g.status !== 'play') { who = g.status === 'won' ? 'anchor' : 'wreck'; what = g.why; tip = ''; }
+    else if (busy) { who = 'boat'; what = 'Sailing…'; tip = 'Watch the boat.'; }
     else if (keeperTurn) {
-      who = '🗼'; what = `${esc(nameOf('keeper'))}: aim the lamp${S.mode === 'signals' ? ` and pick up to ${SIGNALS_PER_TURN} signals` : ''}`;
+      who = 'keeper'; what = `${esc(nameOf('keeper'))}: aim the lamp${S.mode === 'signals' ? ` and pick up to ${SIGNALS_PER_TURN} signals` : ''}`;
       tip = tipFor('keeper', g) || (S.mode === 'signals' ? 'Signals only: no talking about the route!' : 'Talk it through: where should the boat go?');
     } else {
-      who = '⛵'; what = `${esc(nameOf('navigator'))}: plot up to ${movesAllowed(g)} moves and sail`;
+      who = 'navigator'; what = `${esc(nameOf('navigator'))}: plot up to ${movesAllowed(g)} moves and sail`;
       tip = tipFor('navigator', g) || 'Your plan stays secret until you sail. Lit squares are safe to check.';
     }
-    $('banner').className = busy || g.status !== 'play' ? 'sail' : '';
-    $('banner').innerHTML = `<span class="who">${who}</span><div><div class="what">${what}</div>${tip ? `<div class="tip">${esc(tip)}</div>` : ''}</div>`;
+    const key = who + what;
+    $('banner').className = (busy || g.status !== 'play' ? 'sail' : '') + (key !== lastBanner ? ' flash' : '');
+    if (key !== lastBanner && !busy && g.status === 'play' && lastBanner) sfx.select();
+    lastBanner = key;
+    $('banner').innerHTML = `<span class="who">${art(who, { size: 56 })}</span><div><div class="what">${what}</div>${tip ? `<div class="tip">${esc(tip)}</div>` : ''}</div>`;
   }
   $('sigbox').classList.toggle('hidden', S.mode !== 'signals');
-  $('signals').innerHTML = (g?.signals || []).map(s => `<div class="sig"><b>${SIGNAL_ICON[s]}</b><span>${SIGNAL_WORD[s]}</span></div>`).join('')
-    || '<span class="sub">None yet this turn.</span>';
+  const sigHtml = (g?.signals || []).map(s => `<div class="sig"><b>${sigArt(s, 48)}</b><span>${SIGNAL_WORD[s]}</span></div>`).join('') || '<span class="sub">None yet this turn.</span>';
+  if ($('signals').dataset.h !== sigHtml) { $('signals').innerHTML = sigHtml; $('signals').dataset.h = sigHtml; }
   $('log').innerHTML = (S.log || []).slice(0, 7).map((l, i) => typeof l === 'string'
-    ? `<div class="${i < 3 ? '' : 'old'}">${esc(l)}</div>` : `<div class="ev ${l.bad ? 'bad' : 'calm'}">${esc(l.text)}</div>`).join('');
+    ? `<div class="${i < 3 ? '' : 'old'}">${esc(l)}</div>` : `<div class="ev ${l.kind || (l.bad ? 'bad' : 'calm')}">${esc(l.text)}</div>`).join('');
 
-  // win / lose card
-  const over = g && !busy && !S.lobby && g.status !== 'play';
-  if (!picking) $('card').classList.toggle('hidden', !over);
-  if (over && !picking) {
-    const last = S.level >= bays.length - 1, L = lv(), n = stars(g, L);
-    $('card').innerHTML = `<div class="card">
-      <h2>${g.status === 'won' ? '⚓ Home safe' : '🌊 Lost at sea'}</h2>
-      ${g.status === 'won' ? `<div class="stars">${starStr(n)}</div>
-        <div class="why"><span class="got">★ home</span><span class="${g.hull === L.hull ? 'got' : ''}">${g.hull === L.hull ? '★' : '☆'} no damage</span>
-        <span class="${g.turn <= parTurns(L) ? 'got' : ''}">${g.turn <= parTurns(L) ? '★' : '☆'} by turn ${parTurns(L)} (took ${g.turn})</span></div>`
-        : `<p>${esc(g.why)}</p>`}
-      <p><b>Good stopping point.</b> Progress is saved; close the tab whenever you like.</p>
-      <div class="row">
-        ${g.status === 'won' && !last ? '<button class="btn go" data-act="next">Next bay</button>' : ''}
-        ${g.status === 'won' && last ? '<p>That was every bay. Fill in the playtest rubric together!</p>' : ''}
-        <button class="btn" data-act="retry">${g.status === 'won' ? 'Play this bay again' : 'Try again'}</button>
-        <button class="btn" data-act="bays">All bays</button>
-      </div></div>`;
-  }
+  drawCard();
   sendViews();
+}
+
+// The end-of-bay card: built once per result, so its stars count up only once.
+function drawCard() {
+  const g = S.game, over = g && !busy && !S.lobby && g.status !== 'play';
+  if (picking) return;
+  $('card').classList.toggle('hidden', !over);
+  if (!over) { cardKey = ''; return; }
+  const key = `${S.level}:${g.status}:${g.turn}`;
+  if (key === cardKey) return;
+  cardKey = key;
+  const last = S.level >= bays.length - 1, L = lv(), won = g.status === 'won';
+  const reasons = [['home', true], ['no damage', g.hull === L.hull], [`by turn ${parTurns(L)}`, g.turn <= parTurns(L)]];
+  $('card').innerHTML = `<div class="card">
+    <div class="hero">${art(won ? 'anchor' : 'wreck', { size: 84, cls: won ? 'bob' : '' })}</div>
+    <h2>${won ? 'Home safe' : 'Lost at sea'}</h2>
+    ${won ? `<div class="bigstars">${reasons.map(([why, got]) => `<div class="s" data-got="${got ? 1 : 0}" title="${why}">
+        <span class="on">${art('star', { size: 64 })}</span><span class="off">${art('star-empty', { size: 64 })}</span></div>`).join('')}</div>
+      <p class="story">${esc(L.outro || '')}</p>
+      <div class="score">
+        <div><b>${g.turn}</b>turns<div class="why">par ${parTurns(L)}</div></div>
+        <div><b>${g.hull}/${L.hull}</b>hull left</div>
+        <div><b>${Math.max(0, g.oil)}</b>oil to spare</div>
+        <div><b>${S.mode === 'signals' ? S.sync || 0 : '–'}</b>in-sync turns<div class="why">${S.mode === 'signals' ? 'signals mode' : 'try signals mode'}</div></div>
+      </div>`
+      : `<p>${esc(g.why)}</p><p>Every bay can be beaten. Try lighting further ahead, or lighting the floes.</p>`}
+    <p><b>Good stopping point.</b> Progress is saved; close the tab whenever you like.</p>
+    <div class="row">
+      ${won && !last ? '<button class="btn go" data-act="next">Next bay</button>' : ''}
+      ${won && last ? '<p>That was every bay. Fill in the playtest rubric together!</p>' : ''}
+      <button class="btn ${won ? '' : 'go'}" data-act="retry">${won ? 'Play this bay again' : 'Try again'}</button>
+      <button class="btn" data-act="bays">All bays</button>
+    </div></div>`;
+  if (won) [...$('card').querySelectorAll('.bigstars .s')].forEach((el, i) => setTimeout(() => {
+    if (el.dataset.got !== '1') return;
+    el.classList.add('got'); sfx.coin(); burst(el, { count: 10, spread: 70, size: 16 });
+  }, 600 + i * 450));
 }
 
 // What each phone may know. The keeper sees everything except the navigator's plan and the inside of fog banks;
@@ -263,9 +354,10 @@ function sendViews() {
   const g = S.game, ph = g && phaseOf(PHASES, S.turn), L = lv();
   const common = {
     lobby: S.lobby, started: !!g, mode: S.mode, busy, level: S.level, bays: bays.length, bayName: L.name,
-    phase: ph?.name || null, status: g?.status || null, why: g?.why || '', oil: g?.oil, hull: g?.hull, turn: g?.turn,
+    phase: ph?.name || null, status: g?.status || null, why: g?.why || '', oil: g?.oil, hull: g?.hull, maxHull: L.hull, turn: g?.turn,
     canStart: S.lobby && bothSeated(), locked: g ? lockedIn(PHASES, S.turn) : {},
-    events: g?.events?.map(e => e.text) || [], lastPlan: g?.lastPlan || [], stars: g ? stars(g, L) : 0,
+    events: g?.events?.map(e => e.text) || [], bumps: g?.events?.filter(e => BAD.has(e.event)).length || 0,
+    lastPlan: g?.lastPlan || [], stars: g ? stars(g, L) : 0, sync: S.sync || 0,
     partner: { keeper: nameOf('navigator'), navigator: nameOf('keeper') },
   };
   const hidden = d => isFog(L, d.x, d.y) && g.seen[d.y * L.w + d.x] < 2;
@@ -284,60 +376,67 @@ function sendViews() {
 }
 
 function howTo() {
+  const i = name => art(name, { size: 20 });
   return {
-    icon: '🗼', title: 'How to play',
-    intro: 'Bring the boat home to the harbour ⚓ through the dark. You win or lose together.',
+    icon: art('lighthouse', { size: 36 }), title: 'How to play',
+    intro: `Bring the boat home to the harbour ${i('harbor')} through the dark. You win or lose together.`,
     sections: [
       { h: 'Each turn', items: [
-        '<b>Keeper 🗼</b> sees the whole bay on their phone. They tap the map to aim the lamp, which lights a 3×3 patch on the TV.',
-        '<b>Navigator ⛵</b> sees only the TV: what is lit, what is right beside the boat, and what they have already seen. They plot up to 3 moves on their phone and press Sail.',
+        `<b>Keeper</b> ${i('keeper')} sees the whole bay on their phone. They tap the map to aim the lamp, which lights a 3×3 patch on the TV.`,
+        `<b>Navigator</b> ${i('navigator')} sees only the TV: what is lit, what is right beside the boat, and what they have already seen. They plot up to 3 moves on their phone and press Sail.`,
         'Then the floes drift and a measure of lamp oil burns.',
       ] },
       { h: 'Watch out for', items: [
-        'Rocks and reefs: sailing into one costs 1 hull ❤️.',
-        'Ice floes 🧊: they drift every turn and cost 1 hull if they hit. A faded 🧊 on the TV is where one was last seen.',
-        'Currents ›: they push the boat one extra square.',
-        'Running out of oil 🛢️ or hull ❤️ ends the bay.',
+        `Rocks ${i('rock')} and reefs ${i('reef')}: sailing into one costs 1 hull ${i('heart')}.`,
+        `Ice floes ${i('floe')}: they drift every turn and cost 1 hull if they hit. A faded floe on the TV is where one was last seen.`,
+        `Currents ${i('current')}: they push the boat one extra square.`,
+        `Running out of oil ${i('oil')} or hull ends the bay.`,
       ] },
       { h: 'Later bays', items: [
-        'Buoys 🟠: the keeper can drop markers that stay on the TV.',
-        'Fog banks: neither the lamp nor the keeper’s map sees inside. The navigator’s sonar 📡 does.',
+        `Buoys ${i('buoy')}: the keeper can drop markers that stay on the TV.`,
+        `Fog banks ${i('fog')}: neither the lamp nor the keeper’s map sees inside. The navigator’s sonar ${i('sonar')} does.`,
       ] },
-      { h: 'Stars', items: ['★ get home · ★ no damage · ★ home by par.', '“Signals only” mode (bottom right): the keeper may not talk about the route, only send symbols.'] },
+      { h: 'Stars and bonuses', items: [
+        `${i('star')} get home · ${i('star')} no damage · ${i('star')} home by par.`,
+        `“Signals only” mode (bottom right): the keeper may not talk about the route, only send symbols. Sail exactly the signalled directions for an <b>In sync</b> ${i('sync')} turn.`,
+      ] },
     ],
   };
 }
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-let picking = false;
 function pickBay() {
   picking = true;
   $('card').classList.remove('hidden');
   $('card').innerHTML = `<div class="card"><h2>Choose a bay</h2><div class="bays">${bays.map((b, i) =>
     `<button class="btn${i === S.level ? ' on' : ''}" data-act="bay:${i}" ${i > S.unlocked ? 'disabled title="Finish the bay before to unlock"' : ''}>
-      <span>${i + 1}. ${esc(b.name)}</span><span>${i > S.unlocked ? '🔒' : starStr(S.stars[i] || 0)}</span></button>`).join('')}</div>
+      <span>${i + 1}. ${esc(b.name)}</span><span>${i > S.unlocked ? art('lock', { size: 22 }) : starRow(S.stars[i] || 0)}</span></button>`).join('')}</div>
     <div class="row"><button class="btn" data-act="close">Close</button></div></div>`;
 }
 
 document.body.addEventListener('click', e => {
   const act = e.target.closest('[data-act]')?.dataset.act;
   if (!act || e.target.closest('[disabled]')) return;
+  sfx.tap();
   if (act === 'start') onAction(null, { a: 'start' });
   if (act === 'swap') { room.swap('keeper', 'navigator'); render(); }
   if (act === 'next') onAction(null, { a: 'next' });
   if (act === 'retry') onAction(null, { a: 'retry' });
   if (act === 'bays') pickBay();
-  if (act === 'close') { picking = false; render(); }
-  if (act.startsWith('bay:')) { picking = false; start(+act.slice(4)); }
+  if (act === 'close') { picking = false; cardKey = ''; render(); }
+  if (act.startsWith('bay:')) { picking = false; cardKey = ''; start(+act.slice(4)); }
 });
 $('how').onclick = () => showHelp(howTo());
+$('mute').onclick = () => { setMuted(!isMuted()); drawMute(); if (!isMuted()) sfx.good(); };
 $('mode').onclick = () => { S.mode = S.mode === 'talk' ? 'signals' : 'talk'; persist(); render(); };
 $('swap').onclick = () => { room.swap('keeper', 'navigator'); render(); };
 $('restart').onclick = () => { if (!busy) start(S.level); };
 $('seats').onclick = () => { S.lobby = true; persist(); render(); };
 $('bays').onclick = pickBay;
 addEventListener('resize', render);
+render();
+await findLan(); // last: until here a phone joining could call render() before its helpers exist
 render();
 </script>
 </body>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="#163056" stroke="#131a2c" stroke-width="3"/>
+  <path d="M30 14 L60 4 L60 30 Z" fill="#ffe27a" opacity=".35"/>
+  <circle cx="48" cy="14" r="5" fill="#f6ecd2" stroke="#131a2c" stroke-width="2"/>
+  <path d="M4 50 q6 -4 12 0 t12 0 t12 0 t12 0 t10 0 V60 a2 2 0 0 1 -2 2 H6 a2 2 0 0 1 -2 -2 Z" fill="#1d4f7a"/>
+  <path d="M14 56 C14 50 20 48 30 48 C40 48 46 50 46 56 Z" fill="#7a8296" stroke="#131a2c" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M23 49 L26 21 H34 L37 49 Z" fill="#f4f1e8"/>
+  <path d="M24.6 34 H35.4 L36.1 40 H23.9 Z M23.9 42 H36.1 L36.8 47 H23.2 Z" fill="#e0503f"/>
+  <path d="M23 49 L26 21 H34 L37 49 Z" fill="none" stroke="#131a2c" stroke-width="3" stroke-linejoin="round"/>
+  <rect x="22" y="18" width="16" height="4" rx="2" fill="#2b3550" stroke="#131a2c" stroke-width="2.5"/>
+  <rect x="26" y="10" width="8" height="8" rx="2" fill="#ffe27a" stroke="#131a2c" stroke-width="2.5"/>
+  <path d="M24 11 L30 5 L36 11 Z" fill="#e0503f" stroke="#131a2c" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M6 52 q5 -3 10 0 t10 0" stroke="#dff3ff" stroke-width="2.5" fill="none" stroke-linecap="round" opacity=".7"/>
+</svg>

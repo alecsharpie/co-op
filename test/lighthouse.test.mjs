@@ -2,6 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseLevel, newGame, light, sail, ping, movesAllowed, stars, shortestMoves, driftNext, visibleDrifters, blocked, DIRS, MOVES_PER_TURN } from '../lighthouse/game.js';
+import { inSync } from '../lighthouse/game.js';
 import { LEVELS } from '../lighthouse/levels.js';
 
 const bays = LEVELS.map(d => parseLevel({ drifters: [], ...d }));
@@ -148,4 +149,13 @@ test('stars: home, undented, on par', () => {
   assert.equal(stars(s, lv), 3);
   assert.equal(stars({ ...s, hull: 1 }, lv), 2);
   assert.equal(stars({ ...s, status: 'lost' }, lv), 0);
+});
+
+test('in sync: the plan follows the signalled directions exactly', () => {
+  assert.equal(inSync(['E', 'E', 'S'], ['E', 'E', 'S']), true);
+  assert.equal(inSync(['E', 'good', 'S'], ['E', 'wait', 'S']), true); // only directions count
+  assert.equal(inSync(['E', 'S'], ['S', 'E']), false);
+  assert.equal(inSync(['E'], ['E', 'E']), false);
+  assert.equal(inSync([], []), false);
+  assert.equal(inSync(['danger'], ['wait']), false);
 });

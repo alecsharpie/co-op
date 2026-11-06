@@ -225,3 +225,11 @@ export function stars(s, lv) {
   if (s.status !== 'won') return 0;
   return 1 + (s.hull === lv.hull ? 1 : 0) + (s.turn <= parTurns(lv) ? 1 : 0);
 }
+
+// "In sync": in signals-only mode, the navigator sailed exactly the directions the keeper signalled, in order.
+// A small bonus for reading each other (counted on the bay's scorecard), not a rule that changes the outcome.
+export function inSync(signals, plan) {
+  const dirs = list => (list || []).filter(x => DIRS[x]);
+  const a = dirs(signals), b = dirs(plan);
+  return a.length > 0 && a.length === b.length && a.every((x, i) => x === b[i]);
+}

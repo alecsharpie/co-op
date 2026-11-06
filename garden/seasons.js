@@ -15,19 +15,19 @@ export const SEASONS = [
     ],
     guide: {
       1: {
-        board: 'Someone wants 🍵 tea today, and a 🥗 salad by day 3. A salad is 🌿 + 🍅.',
-        grower: { text: 'Water the 🍅 in Bed 2 so it is ripe tomorrow. Then plant 🌿 in Bed 3 and water it too.', at: ['b1', 'b2'] },
-        cook: { text: 'Pick the ripe 🌿 in Bed 1, cook 🍵 tea at the stove, and serve it at the counter. Picking, cooking and serving all happen in that order, so one day is enough.', at: ['b0', 'stove', 'counter'] },
+        board: 'Someone wants {tea} tea today, and a {salad} salad by day 3. A salad is {herb} + {tomato}.',
+        grower: { text: 'Water the {tomato} in Bed 2 so it is ripe tomorrow. Then plant {herb} in Bed 3 and water it too.', at: ['b1', 'b2'] },
+        cook: { text: 'Pick the ripe {herb} in Bed 1, cook {tea} tea at the stove, and serve it at the counter. Picking, cooking and serving all happen in that order, so one day is enough.', at: ['b0', 'stove', 'counter'] },
       },
       2: {
-        board: 'Salad time: the cook needs a 🌿 and a 🍅 in the basket.',
-        grower: { text: 'The cook is picking Beds 2 and 3 today. Plant 🍅 in Bed 2 and 🌿 in Bed 3 again: planting happens after picking, so the beds are free in time.', at: ['b1', 'b2'] },
-        cook: { text: 'Pick the 🍅 in Bed 2 and the 🌿 in Bed 3, then cook 🥗 salad. You are out of tokens, so serve it tomorrow.', at: ['b1', 'b2', 'stove'] },
+        board: 'Salad time: the cook needs a {herb} and a {tomato} in the basket.',
+        grower: { text: 'The cook is picking Beds 2 and 3 today. Plant {tomato} in Bed 2 and {herb} in Bed 3 again: planting happens after picking, so the beds are free in time.', at: ['b1', 'b2'] },
+        cook: { text: 'Pick the {tomato} in Bed 2 and the {herb} in Bed 3, then cook {salad} salad. You are out of tokens, so serve it tomorrow.', at: ['b1', 'b2', 'stove'] },
       },
       3: {
         board: 'Last day: serve the salad before the customer gives up.',
         grower: { text: 'Water the new plants (they will be ready for the next season). Nothing else to do: you can also skip a token.', at: ['b1', 'b2'] },
-        cook: { text: 'Serve the 🥗 at the counter. That is the whole loop: grow, pick, cook, serve.', at: ['counter'] },
+        cook: { text: 'Serve the {salad} at the counter. That is the whole loop: grow, pick, cook, serve.', at: ['counter'] },
       },
     },
   },

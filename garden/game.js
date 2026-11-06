@@ -10,21 +10,21 @@
 export const PHASES = [{ name: 'plan', seats: ['grower', 'cook'] }];
 export const TOKENS = 3;
 export const CROPS = {
-  herb: { icon: '🌿', name: 'Herbs', need: 1 },
-  tomato: { icon: '🍅', name: 'Tomato', need: 2 },
-  pumpkin: { icon: '🎃', name: 'Pumpkin', need: 3, heavy: true },
+  herb: { icon: '{herb}', name: 'Herbs', need: 1 },
+  tomato: { icon: '{tomato}', name: 'Tomato', need: 2 },
+  pumpkin: { icon: '{pumpkin}', name: 'Pumpkin', need: 3, heavy: true },
 };
 export const DISHES = {
-  tea: { icon: '🍵', name: 'Herb tea', needs: { herb: 1 }, stars: 1 },
-  salad: { icon: '🥗', name: 'Salad', needs: { herb: 1, tomato: 1 }, stars: 2 },
-  soup: { icon: '🍲', name: 'Tomato soup', needs: { tomato: 2 }, stars: 2 },
-  pie: { icon: '🥧', name: 'Pumpkin pie', needs: { pumpkin: 1, herb: 1 }, stars: 3 },
+  tea: { icon: '{tea}', name: 'Herb tea', needs: { herb: 1 }, stars: 1 },
+  salad: { icon: '{salad}', name: 'Salad', needs: { herb: 1, tomato: 1 }, stars: 2 },
+  soup: { icon: '{soup}', name: 'Tomato soup', needs: { tomato: 2 }, stars: 2 },
+  pie: { icon: '{pie}', name: 'Pumpkin pie', needs: { pumpkin: 1, herb: 1 }, stars: 3 },
 };
-export const WEATHER = { sun: '☀️', rain: '🌧️', storm: '⛈️' };
+export const WEATHER = { sun: '{sun}', rain: '{rain}', storm: '{storm}' };
 export const UPGRADES = {
-  greenhouse: { icon: '🪴', name: 'Greenhouse bed', text: 'One more bed to grow in.' },
-  compost: { icon: '♻️', name: 'Compost heap', text: 'New plantings start one watering ahead.' },
-  barrel: { icon: '🛢️', name: 'Rain barrel', text: 'Watering a bed also waters the bed next to it.' },
+  greenhouse: { icon: '{greenhouse}', name: 'Greenhouse bed', text: 'One more bed to grow in.' },
+  compost: { icon: '{compost}', name: 'Compost heap', text: 'New plantings start one watering ahead.' },
+  barrel: { icon: '{barrel}', name: 'Rain barrel', text: 'Watering a bed also waters the bed next to it.' },
 };
 
 // with the compost heap, a new planting starts one watering ahead (a crop always needs at least one)
@@ -36,13 +36,13 @@ export const ripe = b => !!b.crop && b.grown >= CROPS[b.crop].need;
 export const toRipen = b => (b.crop ? Math.max(0, CROPS[b.crop].need - b.grown) : 0);
 export const weatherOn = (def, day) => ((def.storm || []).includes(day) ? 'storm' : def.rain.includes(day) ? 'rain' : 'sun');
 export const forecast = (s, def, n = 3) => Array.from({ length: n }, (_, i) => s.day + i).filter(d => d <= def.days).map(d => ({ day: d, w: weatherOn(def, d) }));
-export const upcoming = (s, def) => def.orders.filter(o => o.day > s.day && o.day <= s.day + 2).map(o => ({ ...o, stars: o.stars ?? DISHES[o.dish].stars }));
+export const upcoming = (s, def) => def.orders.map((o, i) => ({ ...o, id: i, who: i % 4 })).filter(o => o.day > s.day && o.day <= s.day + 2).map(o => ({ ...o, stars: o.stars ?? DISHES[o.dish].stars }));
 const recipe = d => Object.entries(DISHES[d].needs).map(([c, n]) => CROPS[c].icon.repeat(n)).join(' + ');
 export const recipeText = d => `${recipe(d)} → ${DISHES[d].icon}`;
 
 function arrive(s, def) {
   def.orders.forEach((o, i) => {
-    if (o.day === s.day) s.orders.push({ id: i, dish: o.dish, due: o.day + o.within - 1, stars: o.stars ?? DISHES[o.dish].stars, joint: !!o.joint });
+    if (o.day === s.day) s.orders.push({ id: i, who: i % 4, dish: o.dish, due: o.day + o.within - 1, stars: o.stars ?? DISHES[o.dish].stars, joint: !!o.joint });
   });
 }
 
@@ -74,29 +74,29 @@ export function optionsFor(role, at, s, def, plan = []) {
       const b = s.beds[+at.slice(1)];
       if (!b) return [];
       const sown = plan.find(t => t.at === at && t.verb === 'plant');
-      const later = sown ? [{ verb: 'water', label: 'Water 💧', desc: `Water the ${CROPS[sown.opt].icon} you are planting in ${bedName(at)} today (watering happens after planting).` },
-        ...(def.storm?.length ? [{ verb: 'cover', label: 'Cover ⛺', desc: `Cover what you plant in ${bedName(at)} so a storm cannot flatten it.` }] : [])] : [];
+      const later = sown ? [{ verb: 'water', label: 'Water {drop}', desc: `Water the ${CROPS[sown.opt].icon} you are planting in ${bedName(at)} today (watering happens after planting).` },
+        ...(def.storm?.length ? [{ verb: 'cover', label: 'Cover {cover}', desc: `Cover what you plant in ${bedName(at)} so a storm cannot flatten it.` }] : [])] : [];
       if (!b.crop) return sown ? later : plant(b, false);
       const opts = [];
       if (!ripe(b)) {
-        opts.push({ verb: 'water', label: 'Water 💧', desc: `Water the ${CROPS[b.crop].icon} in ${bedName(at)}. ${toRipen(b) === 1 ? 'It will be ripe tonight.' : `${toRipen(b)} waterings until ripe.`}` });
-        if (def.storm?.length) opts.push({ verb: 'cover', label: 'Cover ⛺', desc: `Cover the ${CROPS[b.crop].icon} in ${bedName(at)} so a storm cannot flatten it.` });
+        opts.push({ verb: 'water', label: 'Water {drop}', desc: `Water the ${CROPS[b.crop].icon} in ${bedName(at)}. ${toRipen(b) === 1 ? 'It will be ripe tonight.' : `${toRipen(b)} waterings until ripe.`}` });
+        if (def.storm?.length) opts.push({ verb: 'cover', label: 'Cover {cover}', desc: `Cover the ${CROPS[b.crop].icon} in ${bedName(at)} so a storm cannot flatten it.` });
         return opts;
       }
-      if (CROPS[b.crop].heavy) opts.push({ verb: 'lift', label: 'Lift 💪', desc: `Help lift the ${CROPS[b.crop].icon}. The cook must pick ${bedName(at)} the same day.` });
+      if (CROPS[b.crop].heavy) opts.push({ verb: 'lift', label: 'Lift {lift}', desc: `Help lift the ${CROPS[b.crop].icon}. The cook must pick ${bedName(at)} the same day.` });
       return [...opts, ...(sown ? later : plant(b, true))];
     }
-    if (at === 'counter') return [{ verb: 'help', label: 'Help carry 🤝', desc: 'Help carry a 🤝 feast order. Only feasts need it, and the cook must serve the same day.' }];
+    if (at === 'counter') return [{ verb: 'help', label: 'Help carry {partner}', desc: 'Help carry a {partner} feast order. Only feasts need it, and the cook must serve the same day.' }];
     return [];
   }
   if (role === 'cook') {
     if (isBed(at)) {
       const b = s.beds[+at.slice(1)];
       if (!b) return [];
-      return [{ verb: 'harvest', label: 'Pick 🧺', desc: b.crop ? `Pick the ${CROPS[b.crop].icon} in ${bedName(at)} into the basket${CROPS[b.crop].heavy ? ' (the grower must lift too)' : ''}.` : `Pick from ${bedName(at)} into the basket.` }];
+      return [{ verb: 'harvest', label: 'Pick {basket}', desc: b.crop ? `Pick the ${CROPS[b.crop].icon} in ${bedName(at)} into the basket${CROPS[b.crop].heavy ? ' (the grower must lift too)' : ''}.` : `Pick from ${bedName(at)} into the basket.` }];
     }
     if (at === 'stove') return def.dishes.map(d => ({ verb: 'cook', opt: d, label: `Cook ${DISHES[d].icon}`, desc: `Cook ${DISHES[d].name.toLowerCase()} from ${recipe(d)} in the basket.` }));
-    if (at === 'counter') return [{ verb: 'serve', label: 'Serve 🛎️', desc: 'Serve a cooked dish to someone at the counter who ordered it.' }];
+    if (at === 'counter') return [{ verb: 'serve', label: 'Serve {bell}', desc: 'Serve a cooked dish to someone at the counter who ordered it.' }];
   }
   return [];
 }
@@ -144,7 +144,7 @@ export function checkPlan(role, plan, s, def) {
       if (!s.orders.length) return { ok: false, text: 'Nobody is waiting at the counter.' };
       if (!o) return { ok: false, text: `No cooked dish matches an order. Waiting for: ${s.orders.map(o => DISHES[o.dish].icon).join(' ')}.` };
       dishes.splice(dishes.indexOf(o.dish), 1);
-      return o.joint ? { ok: null, text: `Serves the ${DISHES[o.dish].icon} feast if the grower helps carry.` } : { ok: true, text: `Serves ${DISHES[o.dish].icon} for ${'⭐'.repeat(o.stars)}.` };
+      return o.joint ? { ok: null, text: `Serves the ${DISHES[o.dish].icon} feast if the grower helps carry.` } : { ok: true, text: `Serves ${DISHES[o.dish].icon} for ${'{star}'.repeat(o.stars)}.` };
     }
     if (t.verb === 'water') {
       if (!b.crop) return { ok: false, text: 'Bare soil: plant something first.' };
@@ -167,11 +167,14 @@ export function checkPlan(role, plan, s, def) {
 }
 
 // Resolve one day. plans: {grower: [token], cook: [token]}, token = {at, verb, opt?}. Returns the new state and the
-// events to narrate in order: {step, at, who, kind: 'good'|'bad'|'info', text}, each a plain cause → effect sentence.
+// events to narrate in order: {step, at, who, kind: 'good'|'bad'|'info', text, snap}, each a plain cause → effect
+// sentence. Text marks sprites as {name} (drawn by draw.js). snap is the table right after the event (beds, basket,
+// dishes, orders, stars), so the TV can show the day changing one step at a time.
 export function resolveDay(s0, def, plans) {
   const s = structuredClone(s0), ev = [];
   const g = cleanPlan('grower', plans.grower, def, s), c = cleanPlan('cook', plans.cook, def, s);
-  const say = (step, at, who, kind, text) => ev.push({ step, at, who, kind, text });
+  const snap = () => structuredClone({ beds: s.beds, basket: s.basket, dishes: s.dishes, orders: s.orders, stars: s.stars });
+  const say = (step, at, who, kind, text, extra = {}) => ev.push({ step, at, who, kind, text, ...extra, snap: snap() });
   const bedOf = at => s.beds[+at.slice(1)];
   const ups = s.upgrades || [];
 
@@ -181,9 +184,10 @@ export function resolveDay(s0, def, plans) {
     if (!b.crop) { say('harvest', t.at, 'cook', 'bad', `The cook went to pick ${name}, but nothing grows there.`); continue; }
     if (!ripe(b)) { say('harvest', t.at, 'cook', 'bad', `The ${CROPS[b.crop].icon} in ${name} isn't ripe: it needs ${toRipen(b)} more watering${toRipen(b) > 1 ? 's' : ''}.`); continue; }
     if (CROPS[b.crop].heavy && !g.some(x => x.at === t.at && x.verb === 'lift')) { say('harvest', t.at, 'cook', 'bad', `The ${CROPS[b.crop].icon} in ${name} is too heavy to lift alone: the grower must Lift it too.`); continue; }
-    s.basket[b.crop] = (s.basket[b.crop] || 0) + 1;
-    say('harvest', t.at, CROPS[b.crop].heavy ? 'both' : 'cook', 'good', `${CROPS[b.crop].heavy ? 'Together you lifted' : 'The cook picked'} the ${CROPS[b.crop].icon} from ${name} into the basket.`);
+    const crop = b.crop;
+    s.basket[crop] = (s.basket[crop] || 0) + 1;
     Object.assign(b, { crop: null, grown: 0, ripeFor: 0 });
+    say('harvest', t.at, CROPS[crop].heavy ? 'both' : 'cook', 'good', `${CROPS[crop].heavy ? 'Together you lifted' : 'The cook picked'} the ${CROPS[crop].icon} from ${name} into the basket.`, { item: crop });
   }
   for (const t of g.filter(t => t.verb === 'lift')) {
     if (!c.some(x => x.at === t.at && x.verb === 'harvest')) say('harvest', t.at, 'grower', 'bad', `The grower waited to lift in ${bedName(t.at)}, but the cook didn't come to pick.`);
@@ -193,11 +197,11 @@ export function resolveDay(s0, def, plans) {
     const b = bedOf(t.at);
     if (b.crop) { say('plant', t.at, 'grower', 'bad', `${bedName(t.at)} still has ${CROPS[b.crop].icon} in it, so nothing new could be planted.`); continue; }
     Object.assign(b, { crop: t.opt, grown: headStart(s, t.opt), ripeFor: 0 });
-    say('plant', t.at, 'grower', 'good', `The grower planted ${CROPS[t.opt].icon} in ${bedName(t.at)}.`);
+    say('plant', t.at, 'grower', 'good', `The grower planted ${CROPS[t.opt].icon} in ${bedName(t.at)}.`, { item: t.opt });
   }
   // 3. water (rain does every bed; a storm waters nothing and flattens what isn't covered)
   const w = weatherOn(def, s.day), watered = new Set(), covered = new Set(g.filter(t => t.verb === 'cover').map(t => +t.at.slice(1)));
-  if (w === 'rain') { s.beds.forEach((b, i) => { if (b.crop && !ripe(b)) watered.add(i); }); say('water', null, 'sky', 'info', '🌧️ Rain watered every bed today.'); }
+  if (w === 'rain') { s.beds.forEach((b, i) => { if (b.crop && !ripe(b)) watered.add(i); }); say('water', null, 'sky', 'info', '{rain} Rain watered every bed today.'); }
   for (const t of g.filter(t => t.verb === 'water')) {
     const i = +t.at.slice(1), b = s.beds[i];
     if (!b.crop) { say('water', t.at, 'grower', 'bad', `The grower watered ${bedName(t.at)}, but it's bare soil.`); continue; }
@@ -213,23 +217,23 @@ export function resolveDay(s0, def, plans) {
     const at = 'b' + i;
     if (ripe(b)) {
       b.ripeFor++;
-      if (def.wilt && b.ripeFor > def.wilt) { say('grow', at, 'sky', 'bad', `The ${CROPS[b.crop].icon} in ${bedName(at)} sat ripe too long and wilted.`); Object.assign(b, { crop: null, grown: 0, ripeFor: 0 }); }
+      if (def.wilt && b.ripeFor > def.wilt) { const crop = b.crop; Object.assign(b, { crop: null, grown: 0, ripeFor: 0 }); say('grow', at, 'sky', 'bad', `The ${CROPS[crop].icon} in ${bedName(at)} sat ripe too long and wilted.`, { wilted: true }); }
     } else if (w === 'storm') {
-      if (covered.has(i)) say('grow', at, 'grower', 'good', `⛈️ The cover kept the ${CROPS[b.crop].icon} in ${bedName(at)} safe from the storm.`);
-      else if (b.grown > 0) { say('grow', at, 'sky', 'bad', `⛈️ The storm flattened the ${CROPS[b.crop].icon} in ${bedName(at)}: it has to grow again.`); b.grown = 0; }
+      if (covered.has(i)) say('grow', at, 'grower', 'good', `{storm} The cover kept the ${CROPS[b.crop].icon} in ${bedName(at)} safe from the storm.`);
+      else if (b.grown > 0) { b.grown = 0; say('grow', at, 'sky', 'bad', `{storm} The storm flattened the ${CROPS[b.crop].icon} in ${bedName(at)}: it has to grow again.`); }
     } else if (watered.has(i)) {
       b.grown++;
-      if (ripe(b)) say('grow', at, 'sky', 'good', `The ${CROPS[b.crop].icon} in ${bedName(at)} is ripe: the cook can pick it tomorrow.`);
+      if (ripe(b)) say('grow', at, 'sky', 'good', `The ${CROPS[b.crop].icon} in ${bedName(at)} is ripe: the cook can pick it tomorrow.`, { ripened: true });
       else say('grow', at, 'sky', 'info', `The ${CROPS[b.crop].icon} in ${bedName(at)} grew: ${toRipen(b)} more watering${toRipen(b) > 1 ? 's' : ''} to go.`);
     }
   });
-  if (w === 'storm') say('grow', null, 'sky', 'info', '⛈️ A storm blew through: no water today.');
+  if (w === 'storm') say('grow', null, 'sky', 'info', '{storm} A storm blew through: no water today.');
   // 5. cook
   for (const t of c.filter(t => t.verb === 'cook')) {
     if (!canMake(s.basket, t.opt)) { say('cook', 'stove', 'cook', 'bad', `No ${DISHES[t.opt].icon}: it needs ${recipe(t.opt)}, but the basket had ${basketText(s.basket)}.`); continue; }
     for (const [k, n] of Object.entries(DISHES[t.opt].needs)) s.basket[k] -= n;
     s.dishes.push(t.opt);
-    say('cook', 'stove', 'cook', 'good', `The cook made ${DISHES[t.opt].icon} ${DISHES[t.opt].name.toLowerCase()} from ${recipe(t.opt)}.`);
+    say('cook', 'stove', 'cook', 'good', `The cook made ${DISHES[t.opt].icon} ${DISHES[t.opt].name.toLowerCase()} from ${recipe(t.opt)}.`, { item: t.opt });
   }
   // 6. serve: each token serves the most urgent order a ready dish fits
   const helping = g.some(t => t.verb === 'help');
@@ -245,13 +249,12 @@ export function resolveDay(s0, def, plans) {
     s.dishes.splice(s.dishes.indexOf(o.dish), 1);
     s.orders = s.orders.filter(x => x !== o);
     s.stars += o.stars; s.served++;
-    say('serve', 'counter', o.joint ? 'both' : 'cook', 'good', `Served ${DISHES[o.dish].icon}${o.joint ? ' to the feast, carried together' : ''}: +${'⭐'.repeat(o.stars)}`);
+    say('serve', 'counter', o.joint ? 'both' : 'cook', 'good', `Served ${DISHES[o.dish].icon}${o.joint ? ' to the feast, carried together' : ''}: +${'{star}'.repeat(o.stars)}`, { item: o.dish, stars: o.stars, order: o.id });
   }
   if (helping && !c.some(t => t.verb === 'serve')) say('serve', 'counter', 'grower', 'info', 'The grower waited at the counter to help carry, but the cook didn\'t serve.');
 
   // end of day: orders due today go away; tomorrow's arrive
-  for (const o of s.orders.filter(o => o.due <= s.day)) { s.missed++; say('end', 'counter', 'sky', 'bad', `The ${DISHES[o.dish].icon} order gave up waiting and left.`); }
-  s.orders = s.orders.filter(o => o.due > s.day);
+  for (const o of s.orders.filter(o => o.due <= s.day)) { s.missed++; s.orders = s.orders.filter(x => x !== o); say('end', 'counter', 'sky', 'bad', `The ${DISHES[o.dish].icon} order gave up waiting and left.`, { order: o.id }); }
   s.day++;
   if (s.day > def.days) {
     s.day = def.days;
@@ -259,4 +262,14 @@ export function resolveDay(s0, def, plans) {
     s.why = s.status === 'won' ? `${s.stars} stars: the café is the talk of the village.` : `${s.stars} of ${def.target} stars. So close, try the season again.`;
   } else arrive(s, def);
   return { state: s, events: ev };
+}
+
+// How well the two of you worked today, for the end-of-day tally: a perfect day is six placed tokens and nothing
+// that went wrong. Purely a celebration: it does not change the score.
+export function dayTally(plans, events) {
+  const placed = (plans.grower || []).length + (plans.cook || []).length;
+  const hiccups = events.filter(e => e.kind === 'bad' && e.who !== 'sky').length;
+  const together = events.filter(e => e.who === 'both' && e.kind === 'good').length;
+  const stars = events.reduce((n, e) => n + (e.stars || 0), 0);
+  return { placed, hiccups, together, stars, perfect: placed === 2 * TOKENS && hiccups === 0 && events.some(e => e.kind === 'good') };
 }

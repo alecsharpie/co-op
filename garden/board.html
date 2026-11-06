@@ -9,25 +9,26 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <style>
   body { display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
-  header { display: flex; align-items: center; gap: 14px; padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--bg-2); }
-  header h1 { margin: 0; font-size: 22px; }
+  header { display: flex; align-items: center; gap: 14px; padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--bg-2); }
+  header h1 { margin: 0; font-size: 24px; display: flex; align-items: center; gap: 8px; }
   header .season { color: var(--ink-2); font-size: 18px; }
   header .sp { flex: 1; }
+  .icon-btn { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; border: 2px solid var(--line); background: var(--panel); cursor: pointer; padding: 0; }
   main { display: grid; grid-template-columns: 1fr 330px; min-height: 0; }
-  #yard { padding: 22px 22px 120px; display: flex; flex-direction: column; gap: 18px; overflow: auto; }
-  .area h2 { margin: 0 0 10px; font-size: 18px; color: var(--ink-2); }
+  #yard { position: relative; padding: 22px 22px 130px; display: flex; flex-direction: column; gap: 18px; overflow: auto; }
+  .area h2 { margin: 0 0 10px; font-size: 19px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 8px; min-height: 44px; }
+  .area > .row { margin-top: 2px; }
   .row { display: grid; gap: 14px; }
   .beds { grid-template-columns: repeat(var(--n), 1fr); }
   .kitchen { grid-template-columns: 1fr 1fr 2fr; }
-  #yard .card { min-height: 150px; }
-  #yard .card .big { font-size: 56px; }
-  #yard .ticket { font-size: 18px; padding: 6px 12px; }
-  #yard .ticket .ico { font-size: 34px; }
+  #yard .card { min-height: 170px; }
+  #yard .ticket { font-size: 17px; }
+  #yard .tickets { gap: 22px 12px; padding-top: 16px; }
   aside { border-left: 1px solid var(--line); padding: 18px; display: flex; flex-direction: column; gap: 14px; overflow: auto; background: var(--bg-2); }
-  .stat { display: flex; justify-content: space-between; align-items: baseline; font-size: 20px; }
-  .stat b { font-size: 28px; }
-  .goal { height: 14px; border-radius: 999px; background: var(--line); overflow: hidden; }
-  .goal i { display: block; height: 100%; background: var(--accent); transition: width .4s; }
+  .stat { display: flex; justify-content: space-between; align-items: center; font-size: 20px; }
+  .stat b { font-size: 30px; font-family: var(--font-display); display: flex; align-items: center; gap: 6px; }
+  .goal { height: 16px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .goal i { display: block; height: 100%; background: linear-gradient(90deg, #f6b24a, var(--accent)); transition: width .5s; }
   .phase { padding: 16px; border-radius: var(--radius); background: var(--panel); border: 2px solid var(--accent); font-size: 20px; line-height: 1.35; }
   .phase small { display: block; color: var(--ink-2); font-size: 15px; margin-top: 6px; }
   .who { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
@@ -36,36 +37,70 @@
   .log .good { color: var(--good); }
   .settings { margin-top: auto; display: flex; flex-wrap: wrap; gap: 8px; }
   .overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(59, 46, 33, .55); z-index: 10; padding: 24px; }
-  .endcard { max-width: 640px; text-align: center; padding: 36px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 24px; }
-  .endcard h2 { font-size: 40px; margin: 0 0 10px; }
+  .endcard { max-width: 660px; text-align: center; padding: 34px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 24px; }
+  .endcard h2 { font-size: 40px; margin: 8px 0 10px; }
   .endcard p { font-size: 20px; color: var(--ink-2); }
   .endcard .row2 { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
-  .banner { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); max-width: min(900px, 80vw); text-align: center; padding: 14px 28px; border-radius: 24px; background: var(--ink); color: #fff; font-size: 24px; font-weight: 750; line-height: 1.3; box-shadow: 0 8px 30px rgba(0,0,0,.25); z-index: 5; }
-  .guide { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 16px; }
-  .guide div { padding: 8px 10px; border-radius: 12px; background: var(--bg-2); }
-  .votes { display: grid; gap: 10px; margin-top: 14px; text-align: left; }
-  .vote { padding: 12px 14px; border-radius: 14px; border: 2px solid var(--line); background: var(--panel); font-size: 17px; }
-  .vote b { font-size: 19px; }
-  .vote .who { margin-top: 6px; }
-  .order-wrap { display: flex; align-items: center; gap: 10px; }
+  .banner { position: fixed; left: calc(50% - 165px); bottom: 26px; transform: translateX(-50%); max-width: min(880px, 70vw); display: flex; align-items: center; gap: 12px; padding: 12px 26px 12px 14px; border-radius: 26px; background: var(--ink); color: #fff; font-size: 24px; font-weight: 750; line-height: 1.3; box-shadow: 0 8px 30px rgba(0,0,0,.25); z-index: 5; animation: banner-in .3s ease-out; }
+  @keyframes banner-in { from { transform: translate(-50%, 20px); opacity: 0 } }
   .banner.bad { background: var(--bad); }
   .banner.good { background: var(--good); }
+  .banner .face { flex: none; width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; background: rgba(255,255,255,.18); }
+  .guide { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 16px; }
+  .guide div { padding: 8px 10px; border-radius: 12px; background: var(--bg-2); display: flex; gap: 8px; align-items: flex-start; }
+  .votes { display: grid; gap: 10px; margin-top: 14px; text-align: left; }
+  .vote { display: flex; gap: 14px; align-items: center; padding: 12px 14px; border-radius: 14px; border: 2px solid var(--line); background: var(--panel); font-size: 17px; }
+  .vote b { font-size: 19px; }
+  .vote .who { margin-top: 6px; }
+  .order-wrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  /* the day's show */
+  #stage { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+  .walker { position: absolute; left: 0; top: 0; transition: transform .7s cubic-bezier(.45, .05, .35, 1); filter: drop-shadow(0 6px 6px rgba(59, 46, 33, .3)); }
+  .walker .bodyw { display: block; animation: idle 2.6s ease-in-out infinite; }
+  .walker.walking .bodyw { animation: walk .28s ease-in-out infinite alternate; }
+  .walker.cheer .bodyw { animation: cheer .45s ease-in-out 3; }
+  .walker.sad .bodyw { animation: sad .8s ease-in-out 1; }
+  @keyframes idle { 50% { transform: translateY(-3px) } }
+  @keyframes walk { from { transform: translateY(0) rotate(-5deg) } to { transform: translateY(-9px) rotate(5deg) } }
+  @keyframes cheer { 50% { transform: translateY(-22px) scale(1.06) } }
+  @keyframes sad { 30%, 70% { transform: rotate(-8deg) translateY(4px) } }
+  .walker .tag-name { position: absolute; left: 50%; bottom: -10px; transform: translateX(-50%); padding: 1px 8px; border-radius: 999px; color: #fff; font-size: 12px; font-weight: 800; white-space: nowrap; }
+  .walker.grower .tag-name { background: var(--grower); } .walker.cook .tag-name { background: var(--cook); }
+  .flyer { position: fixed; z-index: 60; pointer-events: none; transition: transform .75s cubic-bezier(.5, -0.3, .4, 1.2), opacity .2s; }
+  .weather { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 3; border-radius: 18px; }
+  .weather .rd { position: absolute; top: -30px; animation: fall linear infinite; opacity: .8; }
+  @keyframes fall { to { transform: translateY(110vh) } }
+  .weather.storm { background: rgba(40, 46, 70, .18); animation: flash 2.2s steps(1) infinite; }
+  @keyframes flash { 0%, 100% { background: rgba(40, 46, 70, .18) } 47% { background: rgba(255, 255, 240, .55) } 50% { background: rgba(40, 46, 70, .18) } 53% { background: rgba(255, 255, 240, .4) } }
+  .tally { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: rgba(59, 46, 33, .35); animation: fade .3s; }
+  @keyframes fade { from { opacity: 0 } }
+  .tally .box { min-width: 440px; padding: 28px 34px; border-radius: 26px; background: var(--bg-2); border: 3px solid var(--accent); text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.25); animation: pop .45s cubic-bezier(.3, 1.6, .5, 1); }
+  .tally h2 { margin: 0 0 12px; font-size: 34px; }
+  .tally .rows { display: grid; gap: 8px; font-size: 21px; text-align: left; }
+  .tally .rows div { display: flex; justify-content: space-between; gap: 24px; align-items: center; }
+  .tally .rows b { font-family: var(--font-display); font-size: 24px; display: flex; align-items: center; gap: 4px; }
+  .stamp { display: inline-block; margin-top: 16px; padding: 8px 22px; border-radius: 14px; border: 4px solid var(--good); color: var(--good); font-family: var(--font-display); font-size: 34px; font-weight: 700; transform: rotate(-6deg); animation: stamp .5s cubic-bezier(.3, 1.8, .5, 1) .5s both; }
+  @keyframes stamp { from { transform: rotate(-6deg) scale(2.4); opacity: 0 } }
+  .card .bubble { animation: pop .3s cubic-bezier(.3, 1.6, .5, 1); }
 </style>
 </head>
 <body>
 <header>
-  <h1>🌻 Two-Keeper Garden</h1>
+  <h1><span id="logo"></span> Two-Keeper Garden</h1>
   <span class="season" id="season"></span>
   <span class="sp"></span>
+  <button class="icon-btn" id="mute" aria-label="Sound on or off"></button>
   <span class="chip" id="net"><span class="dot"></span><span>connecting</span></span>
   <span class="chip" id="room"></span>
 </header>
 <main>
   <div id="yard">
     <div class="area order-wrap"><h2 style="margin:0">Each day plays out in this order:</h2><div id="order"></div></div>
-    <div class="area"><h2>🌱 The garden</h2><div class="row beds" id="beds"></div></div>
-    <div class="area"><h2>🍽️ The café</h2><div class="row kitchen" id="kitchen"></div></div>
-    <div class="area"><h2>📖 Recipe book</h2><div id="book"></div></div>
+    <div class="area" id="garden-area" style="position:relative"><h2 id="h-garden">The garden</h2><div class="row beds" id="beds"></div><div class="weather hidden" id="weather"></div></div>
+    <div class="area"><h2 id="h-cafe">The café</h2><div class="row kitchen" id="kitchen"></div></div>
+    <div class="area"><h2 id="h-book">Recipe book</h2><div id="book"></div></div>
+    <div id="stage"></div>
   </div>
   <aside>
     <div class="stat"><span>Day</span><b id="day"></b></div>
@@ -91,15 +126,24 @@ import { hostRoom, load, save } from '../shared/net.js';
 import { renderLobby, findLan } from '../shared/lobby.js';
 import { newTurn, submit, withdraw, phaseOf, lockedIn } from '../shared/phases.js';
 import { showHelp, helpOnce } from '../shared/help.js';
-import { PHASES, newSeason, resolveDay, cleanPlan, optionOf, stations, forecast, upcoming, recipeText, UPGRADES, DISHES } from './game.js';
+import { art, burst, shake, popText } from '../shared/art.js';
+import { sfx, isMuted, setMuted } from '../shared/sfx.js';
+import './art.js';
+import { PHASES, newSeason, resolveDay, cleanPlan, optionOf, stations, forecast, upcoming, recipeText, weatherOn, dayTally, UPGRADES, DISHES } from './game.js';
 import { SEASONS } from './seasons.js';
-import { card, ROLE, recipeBook, DAY_ORDER } from './draw.js';
+import { card, ROLE, recipeBook, dayOrder, DAY_ORDER_TEXT, rich, esc } from './draw.js';
 
 const $ = id => document.getElementById(id);
 const SEATS = {
-  grower: { ...ROLE.grower, label: 'Grower', blurb: 'plants and waters, and sees the weather coming' },
-  cook: { ...ROLE.cook, label: 'Cook', blurb: 'harvests, cooks and serves, and sees who is coming' },
+  grower: { ...ROLE.grower, icon: art('grower', { size: 34 }), label: 'Grower', blurb: 'plants and waters, and sees the weather coming' },
+  cook: { ...ROLE.cook, icon: art('cook', { size: 34 }), label: 'Cook', blurb: 'harvests, cooks and serves, and sees who is coming' },
 };
+$('logo').innerHTML = art('sunflower', { size: 34 });
+$('h-garden').innerHTML = `${art('sprout', { size: 26 })} The garden`;
+$('h-cafe').innerHTML = `${art('stove', { size: 26 })} The café`;
+$('h-book').innerHTML = `${art('book', { size: 26 })} Recipe book`;
+const muteIcon = () => { $('mute').innerHTML = art(isMuted() ? 'mute' : 'sound', { size: 24 }); };
+muteIcon();
 
 const room = hostRoom({ game: 'garden', seats: Object.keys(SEATS), onSeats: render, onAction, onStatus });
 const KEY = `coop-garden-${room.room}`;
@@ -107,7 +151,8 @@ const KEY = `coop-garden-${room.room}`;
 let S = load(KEY) || { season: 0, unlocked: 0, game: null, turn: newTurn(), log: [], lastDay: null, lobby: true };
 S.upgrades ||= []; // kept between seasons
 S.vote ||= null;   // {options, picks: {seat: key}} after a season is won, before the next one
-let busy = false, reveal = null; // reveal: {plans, events, i} while a day plays out
+S.perfect ||= 0;   // perfect days this season
+let busy = false, reveal = null; // reveal: {plans, events, i, view} while a day plays out
 const persist = () => save(KEY, S);
 const def = () => SEASONS[S.season];
 
@@ -119,25 +164,25 @@ function onStatus(st) {
 }
 
 function start(i) {
-  S.season = i; S.game = newSeason(SEASONS[i], S.upgrades); S.turn = newTurn(); S.lobby = false; S.lastDay = null; S.vote = null;
+  S.season = i; S.game = newSeason(SEASONS[i], S.upgrades); S.turn = newTurn(); S.lobby = false; S.lastDay = null; S.vote = null; S.perfect = 0;
   S.log = [{ kind: 'info', text: `${SEASONS[i].name}: ${SEASONS[i].intro}` }];
-  persist(); render();
+  persist(); render(); placeWalkers(true);
   helpOnce('garden-board', HOWTO());
 }
 
 const HOWTO = () => ({
-  icon: '🌻', title: 'How to play', intro: 'Grow food, cook it and serve your customers together. One café, one score.',
+  icon: art('sunflower', { size: 34 }), title: 'How to play', intro: 'Grow food, cook it and serve your customers together. One café, one score.',
   sections: [
     { h: 'Each day', items: [
       'Talk it through, then each of you places <b>3 tokens</b> on your phone, in secret.',
-      `When you are both ready, the TV plays the day in this order: <b>${DAY_ORDER.join(' → ')}</b>.`,
+      `When you are both ready, the TV plays the day in this order: <b>${DAY_ORDER_TEXT}</b>.`,
       'Picking comes before cooking, so the cook can pick, cook and serve all in one day.'] },
     { h: 'Who does what', items: [
-      `${ROLE.grower.icon} <b>Grower</b>: plants seeds and waters beds. Only the grower sees the weather (rain waters every bed).`,
-      `${ROLE.cook.icon} <b>Cook</b>: picks ripe crops into the basket, cooks at the stove, serves at the counter. Only the cook sees who is coming.`,
-      '🤝 Heavy pumpkins and big feast orders need both of you on the same spot on the same day.'] },
-    { h: 'Recipes', items: def().dishes.map(d => `${recipeText(d)} ${DISHES[d].name} (${'⭐'.repeat(DISHES[d].stars)})`) },
-    { h: 'Winning', items: ['Each served order earns ⭐. Reach the season\'s target by the last day.', 'Customers leave if their order waits too long.'] },
+      `${art('grower', { size: 24 })} <b>Grower</b>: plants seeds and waters beds. Only the grower sees the weather (rain waters every bed).`,
+      `${art('cook', { size: 24 })} <b>Cook</b>: picks ripe crops into the basket, cooks at the stove, serves at the counter. Only the cook sees who is coming.`,
+      `${art('partner', { size: 24 })} Heavy pumpkins and big feast orders need both of you on the same spot on the same day.`] },
+    { h: 'Recipes', items: def().dishes.map(d => `${rich(recipeText(d), 22)} ${DISHES[d].name} (${art('star', { size: 16 }).repeat(DISHES[d].stars)})`) },
+    { h: 'Winning', items: [`Each served order earns ${art('star', { size: 16 })}. Reach the season's target by the last day.`, 'Customers leave if their order waits too long.', 'A day where all six tokens do something useful is a <b>perfect day</b>.'] },
   ],
 });
 
@@ -150,109 +195,247 @@ function onAction(seat, a) {
   if (a.a === 'vote' && S.vote && seat && S.vote.options.includes(a.pick)) {
     S.vote.picks[seat] = a.pick;
     const p = Object.values(S.vote.picks);
-    if (p.length === 2 && p[0] === p[1]) { S.upgrades.push(p[0]); S.log.unshift({ kind: 'good', text: `${UPGRADES[p[0]].icon} ${UPGRADES[p[0]].name} built for next season.` }); return start(Math.min(S.season + 1, SEASONS.length - 1)); }
+    sfx.select();
+    if (p.length === 2 && p[0] === p[1]) { S.upgrades.push(p[0]); S.log.unshift({ kind: 'good', text: `${UPGRADES[p[0]].icon} ${UPGRADES[p[0]].name} built for next season.` }); sfx.great(); return start(Math.min(S.season + 1, SEASONS.length - 1)); }
     persist(); return render();
   }
   if (a.a === 'retry' && g?.status === 'lost') return start(S.season);
-  if (a.a === 'start' && S.lobby && bothSeated()) { if (g) { S.lobby = false; persist(); return render(); } return start(0); }
+  if (a.a === 'start' && S.lobby && bothSeated()) { if (g) { S.lobby = false; persist(); render(); return placeWalkers(true); } return start(0); }
   if (!g || g.status !== 'play' || S.lobby || !seat) return;
   if (a.a === 'plan') {
     const r = submit(PHASES, S.turn, seat, cleanPlan(seat, a.plan, def(), g));
     if (r.done) return playDay(r.done.moves); // saved once the day is over, so a reload mid-reveal replays the plan step
-    S.turn = r.turn; persist(); render();
+    S.turn = r.turn; persist(); render(); sfx.lock();
   } else if (a.a === 'unplan') {
-    S.turn = withdraw(PHASES, S.turn, seat); persist(); render();
+    S.turn = withdraw(PHASES, S.turn, seat); persist(); render(); sfx.back();
   }
 }
 
+// --- the day's show ------------------------------------------------------------------------------------------------
 const wait = ms => new Promise(r => setTimeout(r, ms));
+const cardEl = at => document.querySelector(`#yard .card[data-at="${at}"]`);
+
+// The two keepers stand by their rows between days and walk to each station as the day plays out.
+function walkers() {
+  if (!$('stage').children.length) $('stage').innerHTML = ['grower', 'cook'].map(w =>
+    `<div class="walker ${w}" id="w-${w}"><span class="bodyw">${art(w, { size: 78 })}</span><span class="tag-name">${ROLE[w].name}</span></div>`).join('');
+}
+function moveTo(who, el, side = 0) {
+  const w = $('w-' + who); if (!w || !el) return;
+  const y = $('yard').getBoundingClientRect(), r = el.getBoundingClientRect();
+  // stand on the card's top edge, to the right of its title, clear of the tokens
+  const x = r.right - y.left + $('yard').scrollLeft - 96 - (side < 0 ? 62 : 0), top = r.top - y.top + $('yard').scrollTop - 58;
+  w.style.transform = `translate(${x}px, ${top}px)`;
+}
+function placeWalkers(instant) {
+  walkers();
+  for (const w of ['grower', 'cook']) {
+    const el = $('w-' + w), home = $(w === 'grower' ? 'h-garden' : 'h-cafe');
+    if (!el || !home) continue;
+    if (instant) el.style.transition = 'none';
+    const y = $('yard').getBoundingClientRect(), r = home.getBoundingClientRect();
+    el.style.transform = `translate(${r.right - y.left + 14}px, ${r.bottom - y.top + $('yard').scrollTop - 76}px)`;
+    if (instant) { void el.offsetWidth; el.style.transition = ''; }
+  }
+}
+function pose(who, cls, ms = 1400) {
+  for (const w of who === 'both' ? ['grower', 'cook'] : [who]) {
+    const el = $('w-' + w); if (!el) continue;
+    el.classList.remove('cheer', 'sad', 'walking'); void el.offsetWidth; el.classList.add(cls);
+    setTimeout(() => el.classList.remove(cls), ms);
+  }
+}
+
+// A sprite flies from one element to another (picked crop to the basket, dish to the counter, star to the total).
+function fly(sprite, from, to, size = 46) {
+  if (!from || !to) return;
+  const a = from.getBoundingClientRect(), b = to.getBoundingClientRect(), f = document.createElement('div');
+  f.className = 'flyer'; f.innerHTML = art(sprite, { size });
+  f.style.left = a.left + a.width / 2 - size / 2 + 'px'; f.style.top = a.top + a.height / 2 - size / 2 + 'px';
+  document.body.appendChild(f); void f.offsetWidth;
+  f.style.transform = `translate(${b.left + b.width / 2 - a.left - a.width / 2}px, ${b.top + b.height / 2 - a.top - a.height / 2}px) scale(.8)`;
+  setTimeout(() => { f.style.opacity = '0'; setTimeout(() => f.remove(), 250); }, 760);
+}
+
+function weather(kind) {
+  const w = $('weather');
+  w.classList.toggle('hidden', !kind); w.classList.toggle('storm', kind === 'storm');
+  w.innerHTML = kind ? Array.from({ length: 46 }, () => `<span class="rd" style="left:${Math.random() * 100}%;animation-duration:${.55 + Math.random() * .5}s;animation-delay:${-Math.random()}s">${art('raindrop', { size: 22 })}</span>`).join('') : '';
+}
+
 async function playDay(plans) {
   busy = true;
-  const day = S.game.day, { state, events } = resolveDay(S.game, def(), plans);
-  reveal = { plans, events, i: -1 };
-  banner('Plans revealed! Here is how the day went…', 'info'); render();
-  await wait(2200);
+  const day = S.game.day, d = def(), { state, events } = resolveDay(S.game, d, plans);
+  const w = weatherOn(d, day);
+  reveal = { plans, events, i: -1, view: null };
+  sfx.reveal();
+  banner('Plans revealed! Here is how the day went…', 'info', 'partner'); render();
+  for (const who of ['grower', 'cook']) pose(who, 'cheer', 900);
+  await wait(2000);
+  if (w !== 'sun') { weather(w); w === 'storm' ? sfx.thud() : sfx.splash(); }
   for (let i = 0; i < events.length; i++) {
-    reveal.i = i; banner(events[i].text, events[i].kind); render();
-    await wait(1400 + 25 * events[i].text.length);
+    const e = events[i];
+    // walk over first, then the change happens
+    const target = e.at ? cardEl(e.at) : null;
+    if (target && e.who !== 'sky') {
+      for (const who of e.who === 'both' ? ['grower', 'cook'] : [e.who]) { $('w-' + who)?.classList.add('walking'); moveTo(who, target, e.who === 'both' ? (who === 'grower' ? -1 : 1) : 0); }
+      await wait(720);
+      for (const who of ['grower', 'cook']) $('w-' + who)?.classList.remove('walking');
+    }
+    const prev = reveal.view;
+    // a served or departing customer stays on the counter until their moment is over
+    const late = e.step === 'serve' || e.step === 'end';
+    reveal.i = i; reveal.view = late ? prev : e.snap;
+    banner(e.text, e.kind, e.who === 'sky' ? (e.step === 'water' ? 'rain' : e.step === 'grow' && /storm/.test(e.text) ? 'storm' : 'sun') : e.who === 'both' ? 'partner' : e.who);
+    render();
+    await effects(e, prev);
+    if (late) { await wait(700); reveal.view = e.snap; render(); }
+    await wait(900 + 22 * e.text.replace(/\{[a-z-]+\}/g, 'x').length);
   }
-  if (!events.length) { banner('A quiet day: nobody did anything.', 'info'); await wait(1800); }
-  banner(null);
-  S.game = state; S.turn = newTurn(); S.lastDay = { day, events };
-  S.log = [{ kind: 'info', text: `— Day ${day} —` }, ...events.filter(e => e.kind !== 'info' || e.who === 'sky'), ...S.log].slice(0, 40);
+  if (!events.length) { banner('A quiet day: nobody did anything.', 'info', 'sun'); await wait(1800); }
+  banner(null); weather(null);
+  placeWalkers();
+  const tally = dayTally(plans, events);
+  if (tally.perfect) S.perfect++;
+  S.game = state; S.turn = newTurn(); S.lastDay = { day, events: events.map(({ snap, ...e }) => e), tally };
+  S.log = [{ kind: 'info', text: `Day ${day}` }, ...events.filter(e => e.kind !== 'info' || e.who === 'sky').map(({ snap, ...e }) => e), ...S.log].slice(0, 40);
   if (state.status === 'won') {
     S.unlocked = Math.max(S.unlocked, Math.min(S.season + 1, SEASONS.length - 1));
     const options = Object.keys(UPGRADES).filter(k => !S.upgrades.includes(k));
-    if (!def().tutorial && S.season < SEASONS.length - 1 && options.length) S.vote = { options, picks: {} };
+    if (!d.tutorial && S.season < SEASONS.length - 1 && options.length) S.vote = { options, picks: {} };
   }
-  reveal = null; busy = false; persist(); render();
+  reveal = null; persist();
+  await showTally(day, tally, state);
+  busy = false; render();
+  if (state.status !== 'play') { state.status === 'won' ? sfx.win() : sfx.lose(); if (state.status === 'won') setTimeout(() => burst($('end').querySelector('h2') || $('end'), { count: 30, sprite: 'star', spread: 260, size: 30 }), 200); }
 }
 
-function banner(text, kind) {
+// Sound and motion for one event; prev is the table before it, for things that fly from where they were.
+async function effects(e, prev) {
+  const el = e.at ? cardEl(e.at) : null;
+  if (e.kind === 'bad') {
+    sfx.bad(); if (el) shake(el);
+    if (e.who !== 'sky') pose(e.who, 'sad', 900);
+    if (e.step === 'end') { const t = el?.querySelector(`[data-order="${e.order}"]`); t?.classList.add('gone'); }
+    return;
+  }
+  if (e.who === 'both') { pose('both', 'cheer'); popText(el || $('yard'), 'Teamwork!'); burst(el || $('yard'), { count: 16, sprite: 'heart', size: 22 }); sfx.great(); }
+  else if (e.who !== 'sky') pose(e.who, 'cheer', 900);
+  const plant = el?.querySelector('.plant');
+  switch (e.step) {
+    case 'harvest': sfx.select(); fly(e.item, el, cardEl('basket')); break;
+    case 'plant': sfx.tap(); plant?.classList.add('grow-pop'); burst(el, { count: 6, sprite: 'sprout', spread: 70, size: 18 }); break;
+    case 'water': sfx.splash(); if (el) burst(el, { count: 9, sprite: 'drop', spread: 80, size: 16 }); break;
+    case 'grow':
+      if (e.ripened) { sfx.chime(); plant?.classList.add('grow-pop'); burst(el, { count: 12, size: 20 }); }
+      else if (/storm/.test(e.text)) sfx.thud();
+      else { sfx.tap(); plant?.classList.add('grow-pop'); }
+      break;
+    case 'cook': {
+      sfx.whoosh(); const basket = cardEl('basket');
+      Object.entries(DISHES[e.item].needs).forEach(([c], i) => setTimeout(() => fly(c, basket, el, 34), i * 160));
+      await wait(700); sfx.good(); burst(el, { count: 8, size: 18 });
+      break;
+    }
+    case 'serve': {
+      fly(e.item, cardEl('stove'), el, 50); await wait(700);
+      const t = el?.querySelector(`[data-order="${e.order}"]`);
+      sfx.good(); burst(el, { count: 10, sprite: 'heart', size: 20 });
+      for (let k = 0; k < (e.stars || 0); k++) setTimeout(() => { fly('star', el, $('stars'), 34); setTimeout(sfx.coin, 650); }, k * 220);
+      if (t) t.classList.add('happy');
+      await wait(400 + 220 * (e.stars || 0));
+      break;
+    }
+  }
+}
+
+async function showTally(day, t, state) {
+  const box = document.createElement('div');
+  box.className = 'tally';
+  box.innerHTML = `<div class="box"><h2>Day ${day} done</h2><div class="rows">
+    <div><span>Stars earned today</span><b>${t.stars ? art('star', { size: 26 }).repeat(t.stars) : '0'}</b></div>
+    <div><span>Tokens placed</span><b>${t.placed} / 6</b></div>
+    ${t.together ? `<div><span>Done together</span><b>${art('partner', { size: 26 })} ${t.together}</b></div>` : ''}
+    <div><span>Hiccups</span><b>${t.hiccups ? t.hiccups : art('check', { size: 26 })}</b></div>
+  </div>${t.perfect ? '<div class="stamp">Perfect day!</div>' : ''}</div>`;
+  document.body.appendChild(box);
+  if (t.perfect) setTimeout(() => { sfx.great(); burst(box.querySelector('.stamp'), { count: 22, spread: 180 }); }, 600);
+  else sfx.chime();
+  await new Promise(r => { const done = () => { box.remove(); r(); }; box.addEventListener('click', done); setTimeout(done, t.perfect ? 3600 : 2800); });
+}
+
+function banner(text, kind, face) {
   $('banner').classList.toggle('hidden', !text);
-  if (text) { $('banner').textContent = text; $('banner').className = 'banner ' + (kind || ''); }
+  if (text) { $('banner').innerHTML = `${face ? `<span class="face">${art(face, { size: 42 })}</span>` : ''}<span>${rich(text, 28)}</span>`; $('banner').className = 'banner ' + (kind || ''); }
 }
-
-const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function cardFor(at) {
-  const g = S.game, opts = { tokens: [] };
+  const g = view(), opts = { tokens: [] };
   if (reveal) {
     for (const who of ['grower', 'cook']) for (const t of reveal.plans[who] || []) if (t.at === at) {
-      const o = optionOf(who, t, g, def(), reveal.plans[who]);
-      opts.tokens.push({ who, label: `${SEATS[who].tok} ${o ? o.label : t.verb}` });
+      const o = optionOf(who, t, S.game, def(), reveal.plans[who]);
+      opts.tokens.push({ who, label: o ? o.label : t.verb });
     }
     const e = reveal.events[reveal.i];
     if (e && (e.at === at || (e.at === null && at.startsWith('b')))) { opts.cls = 'hot'; if (e.at === at) opts.bubble = { kind: e.kind, text: e.kind === 'good' ? '✓' : e.kind === 'bad' ? '✗' : '•' }; }
+    if (e?.wilted && e.at === at) opts.wilted = true;
   }
-  return card(at, g, def(), opts);
+  return card(at, g, def(), { big: 66, ...opts });
 }
+// the table as it stands at this point of the reveal (or now)
+const view = () => (reveal?.view ? { ...S.game, ...reveal.view } : S.game);
 
 function render() {
-  const g = S.game, d = def();
+  const g0 = S.game, d = def();
   $('lobby').classList.toggle('hidden', !S.lobby);
   if (S.lobby) renderLobby($('lobby'), {
     room: room.room, title: 'Two-Keeper Garden',
     seats: Object.entries(SEATS).map(([k, v]) => ({ ...v, taken: !!room.seat(k), name: room.seat(k)?.name, connected: room.connected(k) })),
-    startable: bothSeated(), startLabel: g && g.status === 'play' ? `Resume day ${g.day}` : 'Start',
+    startable: bothSeated(), startLabel: g0 && g0.status === 'play' ? `Resume day ${g0.day}` : 'Start',
   });
 
-  if (g) {
+  if (g0) {
+    const g = view();
     $('season').textContent = `Season ${S.season + 1} of ${SEASONS.length}: ${d.name}`;
-    $('day').textContent = `${g.day} / ${d.days}`;
-    $('stars').textContent = `⭐ ${g.stars} / ${d.target}`;
+    $('day').textContent = `${g0.day} / ${d.days}`;
+    $('stars').innerHTML = `${art('star', { size: 30 })} ${g.stars} / ${d.target}`;
     $('goal').style.width = Math.min(100, 100 * g.stars / d.target) + '%';
     $('beds').style.setProperty('--n', g.beds.length);
     const beds = stations(d, g).filter(a => a.startsWith('b')).map(cardFor).join('');
     const book = recipeBook(d);
     if ($('book').innerHTML !== book) $('book').innerHTML = book;
-    const step = reveal && reveal.events[reveal.i] ? ['harvest', 'plant', 'water', 'grow', 'cook', 'serve'].indexOf(reveal.events[reveal.i].step) : -1;
-    $('order').innerHTML = `<div class="order">${DAY_ORDER.map((x, i) => `<span class="${i === step ? 'now' : ''}">${x}</span>`).join('<i>→</i>')}</div>`;
-    const kitchen = card('basket', g, d) + cardFor('stove') + cardFor('counter');
+    const step = reveal?.events[reveal.i]?.step ?? null;
+    const order = dayOrder(step);
+    if ($('order').innerHTML !== order) $('order').innerHTML = order;
+    const kitchen = card('basket', g, d, { big: 66 }) + cardFor('stove') + cardFor('counter');
     if ($('beds').innerHTML !== beds) $('beds').innerHTML = beds;
     if ($('kitchen').innerHTML !== kitchen) $('kitchen').innerHTML = kitchen;
     const lk = lockedIn(PHASES, S.turn);
-    $('phase').innerHTML = g.status !== 'play' ? (g.status === 'won' ? '🌻 Season complete!' : '🍂 The season is over')
-      : busy ? `Day ${g.day} is playing out…<small>Watch what happens.</small>`
-      : `Day ${g.day}: talk it over, then place your 3 tokens on your phones.<small>Plans stay secret until you are both ready.</small>${guideHtml()}
-         <div class="who">${Object.keys(SEATS).map(s => `<span class="chip"><span class="dot${lk[s] ? ' on' : ''}"></span>${SEATS[s].icon} ${esc(room.seat(s)?.name || SEATS[s].label)}: ${lk[s] ? 'ready' : 'planning'}</span>`).join('')}</div>`;
+    $('phase').innerHTML = g0.status !== 'play' ? (g0.status === 'won' ? 'Season complete!' : 'The season is over')
+      : busy ? `Day ${g0.day} is playing out…<small>Watch what happens.</small>`
+      : `Day ${g0.day}: talk it over, then place your 3 tokens on your phones.<small>Plans stay secret until you are both ready.</small>${guideHtml()}
+         <div class="who">${Object.keys(SEATS).map(s => `<span class="chip"><span class="dot${lk[s] ? ' on' : ''}"></span>${art(s, { size: 22 })} ${esc(room.seat(s)?.name || SEATS[s].label)}: ${lk[s] ? 'ready' : 'planning'}</span>`).join('')}</div>`;
+    walkers();
+    if (!busy) placeWalkers(!$('stage').dataset.placed); $('stage').dataset.placed = '1';
   }
-  $('log').innerHTML = (S.log || []).slice(0, 12).map(l => `<div class="${l.kind}">${esc(l.text)}</div>`).join('');
+  $('log').innerHTML = (S.log || []).slice(0, 12).map(l => `<div class="${l.kind}">${rich(l.text, 18)}</div>`).join('');
 
-  const over = g && !busy && !S.lobby && g.status !== 'play';
+  const g = S.game, over = g && !busy && !S.lobby && g.status !== 'play';
   const voting = over && g.status === 'won' && S.vote;
   if (!$('end').dataset.picker || over) { $('end').classList.toggle('hidden', !over); delete $('end').dataset.picker; }
   if (over) {
     const last = S.season >= SEASONS.length - 1;
-    $('end').innerHTML = `<div class="endcard">
-      <h2>${g.status === 'won' ? '🌻 What a season!' : '🍂 Season over'}</h2>
-      <p>${esc(g.why)} Served ${g.served}, missed ${g.missed}.</p>
+    const html = `<div class="endcard">
+      ${art(g.status === 'won' ? 'sunflower' : 'wilted', { size: 90, cls: g.status === 'won' ? 'bob' : '' })}
+      <h2>${g.status === 'won' ? 'What a season!' : 'Season over'}</h2>
+      <p>${rich(g.why)} Served ${g.served}, missed ${g.missed}${S.perfect ? `, and ${S.perfect} perfect day${S.perfect > 1 ? 's' : ''}` : ''}.</p>
       <p><b>Good stopping point.</b> Progress is saved; close the tab whenever you like.</p>
       <div class="row2">
         ${voting ? voteHtml() : g.status === 'won' && !last ? '<button class="btn go" data-act="next">Next season</button>' : ''}
         ${g.status === 'won' && last ? '<p>That was every season. Fill in the playtest rubric together!</p>' : ''}
         <button class="btn" data-act="retry">${g.status === 'won' ? 'Play this season again' : 'Try again'}</button>
       </div></div>`;
+    if ($('end').innerHTML !== html) $('end').innerHTML = html;
   }
   sendViews();
 }
@@ -260,14 +443,14 @@ function render() {
 function guideHtml() {
   const G = def().guide?.[S.game.day];
   if (!G) return '';
-  return `<div class="guide"><div>📣 ${esc(G.board)}</div>${['grower', 'cook'].map(r => `<div><b>${ROLE[r].icon} ${ROLE[r].name}:</b> ${esc(G[r].text)}</div>`).join('')}</div>`;
+  return `<div class="guide"><div>${art('speech', { size: 22 })}<span>${rich(G.board, 18)}</span></div>${['grower', 'cook'].map(r => `<div>${art(r, { size: 22 })}<span><b>${ROLE[r].name}:</b> ${rich(G[r].text, 18)}</span></div>`).join('')}</div>`;
 }
 
 function voteHtml() {
   const v = S.vote, p = Object.values(v.picks);
   return `<div style="width:100%"><p><b>Build one upgrade for next season.</b> Vote on your phones: you both have to pick the same one.${p.length === 2 && p[0] !== p[1] ? '<br>You picked different ones: talk it over!' : ''}</p>
-    <div class="votes">${v.options.map(k => `<div class="vote"><b>${UPGRADES[k].icon} ${UPGRADES[k].name}</b><div>${UPGRADES[k].text}</div>
-      <div class="who">${Object.entries(v.picks).filter(([, x]) => x === k).map(([s]) => `<span class="rb ${s}">${ROLE[s].icon} ${ROLE[s].name}</span>`).join(' ')}</div></div>`).join('')}</div></div>`;
+    <div class="votes">${v.options.map(k => `<div class="vote">${art(k, { size: 56 })}<div><b>${UPGRADES[k].name}</b><div>${UPGRADES[k].text}</div>
+      <div class="who">${Object.entries(v.picks).filter(([, x]) => x === k).map(([s]) => `<span class="rb ${s}">${art(s, { size: 18 })} ${ROLE[s].name}</span>`).join(' ')}</div></div></div>`).join('')}</div></div>`;
 }
 
 // Each phone gets the shared table plus its own secret: the grower the forecast, the cook tomorrow's orders.
@@ -293,6 +476,7 @@ document.body.addEventListener('click', e => {
   if (act === 'retry') onAction(null, { a: 'retry' });
   if (act?.startsWith('season:')) { $('end').classList.add('hidden'); start(+act.slice(7)); }
 });
+$('mute').onclick = () => { setMuted(!isMuted()); muteIcon(); if (!isMuted()) sfx.tap(); };
 $('swap').onclick = () => { room.swap('grower', 'cook'); render(); };
 $('howto').onclick = () => showHelp(HOWTO());
 $('restart').onclick = () => { if (!busy) start(S.season); };
@@ -303,6 +487,8 @@ $('seasons').onclick = () => {
     `<button class="btn${i === S.season ? ' on' : ''}" data-act="season:${i}" ${i > S.unlocked ? 'disabled' : ''}>${i + 1}. ${esc(s.name)}</button>`).join('')}</div>
     <div class="row2"><button class="btn sm" onclick="this.closest('.overlay').classList.add('hidden')">Close</button></div></div>`;
 };
+addEventListener('resize', () => { if (!busy) placeWalkers(true); });
+$('yard').addEventListener('scroll', () => { if (!busy) placeWalkers(true); });
 render();
 </script>
 </body>

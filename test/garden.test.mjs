@@ -1,7 +1,7 @@
 // Rules and season checks for Two-Keeper Garden: node --test test/
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { newSeason, resolveDay, optionsFor, cleanPlan, checkPlan, stations, ripe, weatherOn, CROPS, DISHES, TOKENS, forecast, upcoming } from '../garden/game.js';
+import { newSeason, resolveDay, optionsFor, cleanPlan, checkPlan, stations, ripe, weatherOn, dayTally, CROPS, DISHES, TOKENS, forecast, upcoming } from '../garden/game.js';
 import { SEASONS } from '../garden/seasons.js';
 
 const season = name => SEASONS.find(d => d.name === name);
@@ -120,12 +120,12 @@ test('following the guided first season step by step wins it, salad included', (
 test('the phone explains a doomed token before Ready: salad without tomato, unripe pick, rain', () => {
   const def = season('Spring Café'), s = newSeason(def); // b0 herbs ripe, b1 tomato half grown
   const [pick, cook] = checkPlan('cook', [{ at: 'b0', verb: 'harvest' }, { at: 'stove', verb: 'cook', opt: 'salad' }], s, def);
-  assert.equal(pick.ok, true); assert.equal(cook.ok, false); assert.match(cook.text, /Missing 🍅/);
+  assert.equal(pick.ok, true); assert.equal(cook.ok, false); assert.match(cook.text, /Missing \{tomato\}/);
   assert.match(checkPlan('cook', [{ at: 'b1', verb: 'harvest' }], s, def)[0].text, /needs 1 more watering/);
   const wet = { ...s, day: 3 };
   assert.equal(checkPlan('grower', [{ at: 'b1', verb: 'water' }], wet, def)[0].ok, false);
   const r = resolveDay(s, def, { grower: [], cook: [{ at: 'stove', verb: 'cook', opt: 'salad' }] });
-  assert.match(r.events[0].text, /needs 🌿 \+ 🍅, but the basket had nothing/);
+  assert.match(r.events[0].text, /needs \{herb\} \+ \{tomato\}, but the basket had nothing/);
 });
 
 test('storms flatten uncovered growing crops; covering saves them', () => {
@@ -147,4 +147,21 @@ test('upgrades: greenhouse adds a bed, compost gives a head start, the barrel wa
   r = resolveDay(s, def, { grower: [{ at: 'b1', verb: 'water' }], cook: [] });
   assert.equal(r.state.beds[2].grown, 1, 'bed 3 watered by the barrel');
   for (const d of SEASONS) assert.equal(playSeason(d, ['greenhouse', 'compost', 'barrel']).status, 'won', `${d.name} with every upgrade`);
+});
+
+test('each event carries the table as it stood right after it, ending on the day\'s result', () => {
+  const def = SEASONS[0], s = newSeason(def);
+  const plans = { grower: [{ at: 'b1', verb: 'water' }, { at: 'b2', verb: 'plant', opt: 'herb' }, { at: 'b2', verb: 'water' }],
+    cook: [{ at: 'b0', verb: 'harvest' }, { at: 'stove', verb: 'cook', opt: 'tea' }, { at: 'counter', verb: 'serve' }] };
+  const r = resolveDay(s, def, plans);
+  const pick = r.events.find(e => e.step === 'harvest');
+  assert.equal(pick.snap.basket.herb, 1); assert.equal(pick.snap.beds[0].crop, null); assert.equal(pick.item, 'herb');
+  const cook = r.events.find(e => e.step === 'cook');
+  assert.equal(cook.snap.basket.herb, 0); assert.deepEqual(cook.snap.dishes, ['tea']);
+  const last = r.events.at(-1);
+  assert.equal(last.snap.stars, r.state.stars); assert.deepEqual(last.snap.beds, r.state.beds);
+  assert.ok(r.events.every(e => !/[\p{Extended_Pictographic}]/u.test(e.text)), 'texts use {sprite} marks, not emoji');
+  const t = dayTally(plans, r.events);
+  assert.deepEqual([t.placed, t.hiccups, t.stars, t.perfect], [6, 0, 1, true]);
+  assert.equal(dayTally({ grower: plans.grower, cook: plans.cook.slice(0, 2) }, r.events).perfect, false);
 });

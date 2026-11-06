@@ -24,7 +24,7 @@
   .secret { padding: 10px 12px; border-radius: var(--radius); background: #fff; border: 2px dashed var(--accent); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 16px; }
   .secret .lab { font-weight: 800; color: var(--accent); width: 100%; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
   .wx { display: flex; flex-direction: column; align-items: center; font-size: 13px; color: var(--ink-2); min-width: 54px; }
-  .wx b { font-size: 30px; line-height: 1.1; }
+  .secret .when { font-weight: 700; color: var(--ink-2); }
   .wx.storm { color: var(--bad); font-weight: 800; }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .grid .card { min-height: 108px; padding: 10px; }
@@ -33,11 +33,10 @@
   .grid .card .tok { min-height: 44px; font-size: 16px; touch-action: none; cursor: grab; }
   .tray { display: flex; gap: 10px; justify-content: center; padding: 8px; border-radius: var(--radius); background: var(--bg-2); border: 2px dashed var(--line); min-height: 84px; align-items: center; }
   .tray .lab { color: var(--ink-2); font-size: 14px; }
-  .handtok { width: 68px; height: 68px; border-radius: 50%; display: grid; place-items: center; font-size: 34px; color: #fff; touch-action: none; cursor: grab; box-shadow: 0 3px 0 rgba(0,0,0,.18); }
-  .handtok.grower { background: var(--grower); }
-  .handtok.cook { background: var(--cook); }
+  .handtok { width: 68px; height: 68px; display: grid; place-items: center; touch-action: none; cursor: grab; transition: transform .15s; }
+  .handtok:active { transform: scale(1.08); }
   .handtok.sel, .tok.sel { outline: 4px solid var(--accent); outline-offset: 3px; }
-  .ghost { position: fixed; z-index: 50; pointer-events: none; transform: translate(-50%, -50%) scale(1.1); opacity: .92; }
+  .ghost { position: fixed; z-index: 50; pointer-events: none; transform: translate(-50%, -60%) scale(1.25) rotate(-8deg); filter: drop-shadow(0 14px 10px rgba(59, 46, 33, .35)); transition: none; }
   .center { margin: auto 0; text-align: center; display: flex; flex-direction: column; gap: 14px; }
   .center h1 { margin: 0; font-size: 34px; }
   input { font: inherit; font-size: 28px; padding: 14px; border-radius: var(--radius); border: 2px solid var(--line); background: var(--bg-2); color: var(--ink); text-align: center; width: 100%; }
@@ -68,7 +67,16 @@
   .opt .d { font-size: 15px; color: var(--ink-2); }
   .opt .c { font-size: 14px; font-weight: 700; }
   .opt.cur { border-color: var(--accent); }
-  .row2 { display: flex; gap: 10px; } .row2 .btn { flex: 1; }
+  .row2 { display: flex; gap: 10px; } .row2 .btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+  .opt.up { flex-direction: row; align-items: center; gap: 12px; } .opt.up > span { display: flex; flex-direction: column; gap: 3px; }
+  .guidebox { display: block; } .guidebox > svg.art { vertical-align: -6px; margin-right: 2px; }
+  .secret .lab, .say, .label { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .yday { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin: 4px 0; font-weight: 700; color: var(--ink); }
+  .yday span { display: inline-flex; align-items: center; gap: 3px; }
+  .stamp-sm { padding: 2px 10px; border: 3px solid var(--good); border-radius: 10px; color: var(--good); font-family: var(--font-display); transform: rotate(-4deg); }
+  .top .stats { display: inline-flex; align-items: center; gap: 3px; }
+  .top .role { display: inline-flex; align-items: center; gap: 6px; }
+  .center h1 { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 </style>
 </head>
 <body>
@@ -76,25 +84,31 @@
 <script type="module">
 import { joinRoom, param, load, save } from '../shared/net.js';
 import { showHelp, helpOnce, roleCard, helpButtonHtml } from '../shared/help.js';
-import { optionsFor, optionOf, checkPlan, stations, rolesAt, isBed, bedName, TOKENS, WEATHER, DISHES, CROPS, UPGRADES, recipeText } from './game.js';
+import { art } from '../shared/art.js';
+import { sfx } from '../shared/sfx.js';
+import './art.js';
+import { optionsFor, optionOf, checkPlan, stations, rolesAt, isBed, bedName, TOKENS, DISHES, CROPS, UPGRADES, recipeText } from './game.js';
 import { SEASONS } from './seasons.js';
-import { card, ticket, ROLE, recipeBook, DAY_ORDER } from './draw.js';
+import { card, ticket, ROLE, recipeBook, DAY_ORDER_TEXT, rich, esc } from './draw.js';
 
 const $app = document.getElementById('app');
-const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const A = (n, size = 22) => art(n, { size });
+const buzz = p => { if (navigator.vibrate) navigator.vibrate(p); };
 
 let status = 'connecting', seat = null, V = null, link = null;
 // this phone's plan before it is sent: [{at, verb, opt}], reset each day
 let plan = [], planFor = null;
 let sheet = null;               // the action picker: {at, from: 'tray' | index of a placed token}
 let drag = null, pending = false; // while dragging, incoming views wait
+let justPlaced = null, wasBusy = false; // the token to pop in, and whether the day was already playing out
+const mark = ok => A(ok === true ? 'check' : ok === false ? 'cross' : 'partner', 18);
 
 const room = (param('room') || '').toUpperCase();
 if (!room) joinForm(); else connect(room);
 
 function joinForm() {
   $app.innerHTML = `<div class="center">
-    <h1>🌻 Garden</h1>
+    <h1>${A('sunflower', 44)} Garden</h1>
     <div class="label">Room code on the TV</div>
     <input class="code" id="code" maxlength="5" autocomplete="off" autocapitalize="characters" placeholder="ABCDE">
     <div class="label">Your name (optional)</div>
@@ -125,26 +139,27 @@ const partnerOf = s => (s === 'grower' ? 'cook' : 'grower');
 // What this seat can do and what only the partner can, for this season's rules.
 function roleHelp(r) {
   const d = def(), pumpkins = d.crops.includes('pumpkin'), storms = !!d.storm?.length, feasts = d.orders.some(o => o.joint);
+  const weather = `${A('eye')} <b>See the weather.</b> Rain waters every bed, so tell the cook and save your tokens.`;
   const grower = [
-    '🌱 <b>Plant</b> seeds in bare beds (you choose the crop).',
-    `💧 <b>Water</b> growing crops. Each needs a number of waterings to ripen: ${d.crops.map(c => `${CROPS[c].icon} ${CROPS[c].need}`).join(', ')}.`,
-    '🔒 <b>See the weather.</b> Rain waters every bed, so tell the cook and save your tokens.',
-    ...(storms ? ['⛺ <b>Cover</b> growing crops before a ⛈️ storm, or it flattens them.'] : []),
-    ...(pumpkins ? ['💪 <b>Lift</b> ripe pumpkins: the cook must pick the same bed the same day.'] : []),
-    ...(feasts ? ['🤝 <b>Help carry</b> feast orders at the counter, the same day the cook serves.'] : []),
+    `${A('sprout')} <b>Plant</b> seeds in bare beds (you choose the crop).`,
+    `${A('water')} <b>Water</b> growing crops. Each needs a number of waterings to ripen: ${d.crops.map(c => `${A(c, 20)} ${CROPS[c].need}`).join(', ')}.`,
+    weather,
+    ...(storms ? [`${A('cover')} <b>Cover</b> growing crops before a ${A('storm', 20)} storm, or it flattens them.`] : []),
+    ...(pumpkins ? [`${A('lift')} <b>Lift</b> ripe pumpkins: the cook must pick the same bed the same day.`] : []),
+    ...(feasts ? [`${A('partner')} <b>Help carry</b> feast orders at the counter, the same day the cook serves.`] : []),
   ];
   const cook = [
-    '🧺 <b>Pick</b> ripe crops into the basket.',
-    `🍳 <b>Cook</b> at the stove from what is in the basket: ${d.dishes.map(recipeText).join(', ')}.`,
-    '🛎️ <b>Serve</b> cooked dishes to customers at the counter for ⭐.',
-    '🔒 <b>See who is coming</b> in the next two days. Tell the grower what to plant.',
+    `${A('basket')} <b>Pick</b> ripe crops into the basket.`,
+    `${A('pan')} <b>Cook</b> at the stove from what is in the basket: ${d.dishes.map(k => rich(recipeText(k), 20)).join(', ')}.`,
+    `${A('bell')} <b>Serve</b> cooked dishes to customers at the counter for ${A('star', 18)}.`,
+    `${A('eye')} <b>See who is coming</b> in the next two days. Tell the grower what to plant.`,
   ];
   return roleCard({
-    icon: ROLE[r].icon, role: ROLE[r].name,
-    goal: `Together, earn ${d.target} ⭐ by serving orders before day ${d.days} ends. You share one score.`,
+    icon: A(ROLE[r].art, 34), role: ROLE[r].name,
+    goal: `Together, earn ${d.target} ${A('star', 18)} by serving orders before day ${d.days} ends. You share one score.`,
     can: r === 'grower' ? grower : cook,
-    partner: r === 'grower' ? cook.map(x => x.replace('Tell the grower what to plant.', '')) : grower.filter(x => !x.startsWith('🔒')).concat('🔒 <b>See the weather.</b>'),
-    tips: [`Each day plays out in this order: ${DAY_ORDER.join(' → ')}.`,
+    partner: r === 'grower' ? cook.map(x => x.replace(' Tell the grower what to plant.', '')) : grower.filter(x => x !== weather).concat(`${A('eye')} <b>See the weather.</b>`),
+    tips: [`Each day plays out in this order: ${DAY_ORDER_TEXT}.`,
       r === 'grower' ? 'Planting happens after picking: you can replant a bed the cook picks today.' : 'Picking happens before cooking: you can pick, cook and serve in one day.',
       'Tap any station to see exactly what your token would do there.'],
   });
@@ -153,18 +168,18 @@ function roleHelp(r) {
 // What changed since the season before, shown once per season on each phone.
 function newThisSeason() {
   const d = def(), p = SEASONS[V.season - 1], items = [];
-  for (const c of d.crops.filter(c => !p.crops.includes(c))) items.push(`${CROPS[c].icon} <b>${CROPS[c].name}</b> to grow: ${CROPS[c].need} waterings${CROPS[c].heavy ? ', and too heavy for one: the grower Lifts while the cook Picks, same bed, same day' : ''}.`);
-  for (const k of d.dishes.filter(k => !p.dishes.includes(k))) items.push(`New recipe: ${recipeText(k)} <b>${DISHES[k].name}</b> (${'⭐'.repeat(DISHES[k].stars)}).`);
+  for (const c of d.crops.filter(c => !p.crops.includes(c))) items.push(`${A(c)} <b>${CROPS[c].name}</b> to grow: ${CROPS[c].need} waterings${CROPS[c].heavy ? ', and too heavy for one: the grower Lifts while the cook Picks, same bed, same day' : ''}.`);
+  for (const k of d.dishes.filter(k => !p.dishes.includes(k))) items.push(`New recipe: ${rich(recipeText(k), 22)} <b>${DISHES[k].name}</b> (${A('star', 16).repeat(DISHES[k].stars)}).`);
   if (d.wilt && d.wilt !== p.wilt) items.push(`Ripe crops wilt if nobody picks them within <b>${d.wilt} days</b>.`);
-  if (d.storm?.length && !p.storm?.length) items.push('⛈️ <b>Storms</b>: only the grower sees them coming. A storm flattens growing crops unless the grower Covers them that day.');
-  if (d.orders.some(o => o.joint) && !p.orders.some(o => o.joint)) items.push('🤝 <b>Feast orders</b>: worth more, but the grower must Help carry at the counter the day the cook serves.');
-  return { icon: '🌻', title: d.name, intro: d.intro, sections: items.length ? [{ h: 'New this season', items }] : [] };
+  if (d.storm?.length && !p.storm?.length) items.push(`${A('storm')} <b>Storms</b>: only the grower sees them coming. A storm flattens growing crops unless the grower Covers them that day.`);
+  if (d.orders.some(o => o.joint) && !p.orders.some(o => o.joint)) items.push(`${A('feast')} <b>Feast orders</b>: worth more, but the grower must Help carry at the counter the day the cook serves.`);
+  return { icon: A('sunflower', 34), title: d.name, intro: rich(d.intro), sections: items.length ? [{ h: 'New this season', items }] : [] };
 }
 
 function render() {
   if (drag) { pending = true; return; }
   if (!seat || !V || V.seat !== seat) {
-    $app.innerHTML = `<div class="center"><h1>🌻</h1><div class="msg">${
+    $app.innerHTML = `<div class="center"><h1>${A('sunflower', 64)}</h1><div class="msg">${
       status === 'full' ? 'Both seats are taken in this room.' :
       status === 'waiting' ? `Looking for the board of room ${esc(room)}…<small>Is the TV page open?</small>` :
       seat ? 'Connected. Waiting for the board…' : `Joining room ${esc(room)}…`}</div></div>`;
@@ -172,9 +187,11 @@ function render() {
   }
   if (!helpOnce(`garden-${seat}`, roleHelp(seat)) && V.started && !V.lobby && V.season > 0 && V.state?.status === "play") helpOnce(`garden-${seat}-season-${V.season}`, newThisSeason());
   const R = ROLE[seat], g = V.state;
+  if (V.busy && !wasBusy) buzz([20, 40, 20]);
+  wasBusy = V.busy;
   const net = status === 'open' ? '' : `<span class="chip"><span class="dot"></span>reconnecting</span>`;
-  const stats = g ? `<span class="stats">☀️ ${g.day}/${def().days} · ⭐ ${g.stars}/${def().target}</span>` : '';
-  let html = `<div class="top"><span class="role">${R.icon} ${R.name}</span>${helpButtonHtml()}${net}<span class="sp"></span>${stats}</div>`;
+  const stats = g ? `<span class="stats">${A('sun', 20)} ${g.day}/${def().days} · ${A('star', 20)} ${g.stars}/${def().target}</span>` : '';
+  let html = `<div class="top"><span class="role">${A(R.art, 30)} ${R.name}</span>${helpButtonHtml()}${net}<span class="sp"></span>${stats}</div>`;
 
   if (V.lobby) {
     html += `<div class="center"><div class="msg">You are the <b>${R.name}</b>.<small>${seat === 'grower'
@@ -182,7 +199,7 @@ function render() {
       : 'You pick, cook and serve, and only you can see who is coming.'} Tap <b>?</b> any time to see who does what.</small></div>
       ${V.canStart ? `<button class="btn go big" data-act="start">${V.started && g?.status === 'play' ? 'Resume' : 'Start'}</button>` : '<div class="label">Waiting for your partner to join…</div>'}</div>`;
   } else if (g.status !== 'play') {
-    html += `<div class="center"><div class="msg you">${g.status === 'won' ? '🌻 Season complete!' : '🍂 ' + esc(g.why)}<small>Good stopping point: progress is saved.</small></div>${endActions()}</div>`;
+    html += `<div class="center">${A(g.status === 'won' ? 'sunflower' : 'wilted', 80)}<div class="msg you">${g.status === 'won' ? 'Season complete!' : rich(g.why)}<small>Good stopping point: progress is saved.</small></div>${endActions()}</div>`;
   } else {
     const key = `${V.season}:${g.day}`;
     if (planFor !== key) { planFor = key; plan = []; sheet = null; }
@@ -198,44 +215,45 @@ function render() {
 function endActions() {
   const g = V.state, v = V.vote;
   if (g.status === 'won' && v) return `<div class="msg">Build one upgrade for next season. You both have to pick the same one.${v.mine && v.partner && v.mine !== v.partner ? '<small><b>You picked different ones: talk it over!</b></small>' : v.mine ? '<small>Waiting for your partner…</small>' : ''}</div>
-    ${v.options.map(k => `<button class="opt${v.mine === k ? ' cur' : ''}" data-act="vote:${k}"><span class="l">${UPGRADES[k].icon} ${UPGRADES[k].name}${v.mine === k ? ' ✓' : ''}</span><span class="d">${UPGRADES[k].text}</span>${v.partner === k ? `<span class="c ok-true">${ROLE[partnerOf(seat)].icon} your partner picked this</span>` : ''}</button>`).join('')}`;
+    ${v.options.map(k => `<button class="opt up${v.mine === k ? ' cur' : ''}" data-act="vote:${k}">${A(k, 52)}<span><span class="l">${UPGRADES[k].name}${v.mine === k ? ' ✓' : ''}</span><span class="d">${UPGRADES[k].text}</span>${v.partner === k ? `<span class="c ok-true">${A(partnerOf(seat), 18)} your partner picked this</span>` : ''}</span></button>`).join('')}`;
   return g.status === 'won' ? '<button class="btn go big" data-act="next">Next season</button>' : '<button class="btn go big" data-act="retry">Try again</button>';
 }
 
 const stationName = at => (isBed(at) ? bedName(at) : at === 'stove' ? 'Stove' : 'Counter');
 const labelOf = t => optionOf(seat, t, V.state, def(), plan)?.label || t.verb;
-const onlyText = at => { const r = Object.keys(rolesAt(at, def())); return r.length === 1 && r[0] !== seat ? `${ROLE[r[0]].icon} ${ROLE[r[0]].name} only` : ''; };
+const onlyText = at => { const r = Object.keys(rolesAt(at, def())); return r.length === 1 && r[0] !== seat ? `{${r[0]}} ${ROLE[r[0]].name} only` : ''; };
 
 function planner() {
   const g = V.state, d = def(), partner = partnerOf(seat), checks = checkPlan(seat, plan, g, d);
   let h = '<div class="scroll">';
   const guided = V.guide && !locked() && !V.busy;
-  if (guided) h += `<div class="guidebox">👉 <b>Your step:</b> ${esc(V.guide.text)}<small class="label" style="display:block;margin-top:6px">Tap a station to choose what to do there. ${V.locked[partner] ? '<b>Your partner is ready.</b>' : ''}</small></div>`;
+  if (guided) h += `<div class="guidebox">${A(ROLE[seat].tok, 26)} <b>Your step:</b> ${rich(V.guide.text)}<small class="label" style="display:block;margin-top:6px">Tap a station to choose what to do there. ${V.locked[partner] ? '<b>Your partner is ready.</b>' : ''}</small></div>`;
   else h += `<div class="msg${locked() || V.busy ? '' : ' you'}">${V.busy ? 'The day is playing out… watch the TV.'
     : locked() ? `Locked in. ${V.locked[partner] ? 'Revealing…' : 'Waiting for your partner…'}<small>You can still change your plan until you are both ready.</small>`
     : `Tap a station to choose what to do there. You have ${TOKENS} tokens a day.<small>${V.locked[partner] ? '<b>Your partner is ready.</b>' : 'Your partner is planning too. Talk it through!'}</small>`}</div>`;
-  if (V.forecast) h += `<div class="secret"><span class="lab">🔒 Only you can see: the weather</span>${V.forecast.map((f, i) =>
-    `<span class="wx${f.w === 'storm' ? ' storm' : ''}"><b>${WEATHER[f.w]}</b>${f.w}<br>${i === 0 ? 'today' : i === 1 ? 'tomorrow' : 'day ' + f.day}</span>`).join('')}<span class="label">🌧️ rain waters every bed${d.storm?.length ? ' · ⛈️ a storm flattens growing crops unless you cover them' : ''}</span><span class="say">🗣️ Say it out loud: the cook can't see this.</span></div>`;
-  if (V.upcoming) h += `<div class="secret"><span class="lab">🔒 Only you can see: who is coming</span>${V.upcoming.length
-    ? V.upcoming.map(o => `<span>Day ${o.day}:</span>${ticket({ ...o, due: o.day + o.within - 1 }, o.day)}`).join('') : '<span class="label">Nobody new in the next two days.</span>'}<span class="say">🗣️ Say it out loud: the grower can't see this.</span></div>`;
+  if (V.forecast) h += `<div class="secret"><span class="lab">${A('eye', 18)} Only you can see: the weather</span>${V.forecast.map((f, i) =>
+    `<span class="wx${f.w === 'storm' ? ' storm' : ''}">${A(f.w, 40)}${f.w}<br>${i === 0 ? 'today' : i === 1 ? 'tomorrow' : 'day ' + f.day}</span>`).join('')}<span class="label">${A('rain', 18)} rain waters every bed${d.storm?.length ? ` · ${A('storm', 18)} a storm flattens growing crops unless you cover them` : ''}</span><span class="say">${A('speech', 18)} Say it out loud: the cook can't see this.</span></div>`;
+  if (V.upcoming) h += `<div class="secret"><span class="lab">${A('eye', 18)} Only you can see: who is coming</span>${V.upcoming.length
+    ? V.upcoming.map(o => `<span class="when">Day ${o.day}:</span>${ticket({ ...o, due: o.day + o.within - 1 }, o.day, { size: 40 })}`).join('') : '<span class="label">Nobody new in the next two days.</span>'}<span class="say">${A('speech', 18)} Say it out loud: the grower can't see this.</span></div>`;
   h += recipeBook(d, { compact: true });
 
   const guideAt = new Set(!locked() && V.guide ? V.guide.at : []);
   const cards = stations(d, g).map(at => {
-    const toks = plan.map((t, i) => [t, i]).filter(([t]) => t.at === at).map(([t, i]) => ({ who: seat, label: labelOf(t), attrs: `data-tok="${i}"` }));
-    return card(at, g, d, { tokens: toks, lock: optionsFor(seat, at, g, d, plan).length ? '' : onlyText(at) || 'nothing to do here', cls: (guideAt.has(at) ? 'guide' : '') + (at === 'counter' ? ' wide' : '') });
+    const toks = plan.map((t, i) => [t, i]).filter(([t]) => t.at === at).map(([t, i]) => ({ who: seat, label: labelOf(t), attrs: `data-tok="${i}"`, cls: i === justPlaced ? 'pop' : '' }));
+    return card(at, g, d, { big: 44, tokens: toks, lock: optionsFor(seat, at, g, d, plan).length ? '' : onlyText(at) || 'nothing to do here', cls: (guideAt.has(at) ? 'guide' : '') + (at === 'counter' ? ' wide' : '') });
   });
-  h += `<div class="grid">${cards.slice(0, -2).join('')}${card('basket', g, d, { badges: false })}${cards.slice(-2).join('')}</div>`;
+  h += `<div class="grid">${cards.slice(0, -2).join('')}${card('basket', g, d, { badges: false, big: 44 })}${cards.slice(-2).join('')}</div>`;
+  justPlaced = null;
 
   if (plan.length) h += `<div class="plan"><h3>Your plan</h3>${plan.map((t, i) => `<div class="pl${checks[i].ok === false ? ' bad' : ''}" data-edit="${i}"><span class="n ${seat}">${i + 1}</span><div>
-    <div class="t">${esc(stationName(t.at))} · ${esc(labelOf(t))}</div><div class="c ok-${checks[i].ok}">${checks[i].ok === true ? '✓' : checks[i].ok === false ? '✗' : '🤝'} ${esc(checks[i].text)}</div></div></div>`).join('')}</div>`;
-  if (V.lastDay?.events.length) h += `<div class="recap"><b>Yesterday (day ${V.lastDay.day})</b>${V.lastDay.events.map(e => `<div class="${e.kind}">${esc(e.text)}</div>`).join('')}</div>`;
+    <div class="t">${esc(stationName(t.at))} · ${rich(labelOf(t))}</div><div class="c ok-${checks[i].ok}">${mark(checks[i].ok)} ${rich(checks[i].text, 18)}</div></div></div>`).join('')}</div>`;
+  if (V.lastDay?.events.length) { const t = V.lastDay.tally; h += `<div class="recap"><b>Yesterday (day ${V.lastDay.day})</b>${t ? `<div class="yday">${t.perfect ? '<span class="stamp-sm">Perfect day!</span>' : ''}<span>${A('star', 18)} ${t.stars} earned</span><span>${A('partner', 18)} ${t.together} together</span>${t.hiccups ? `<span>${t.hiccups} hiccup${t.hiccups > 1 ? 's' : ''}</span>` : ''}</div>` : ''}${V.lastDay.events.map(e => `<div class="${e.kind}">${rich(e.text, 18)}</div>`).join('')}</div>`; }
   h += '</div><div class="dock">';
   const left = TOKENS - plan.length, doomed = checks.filter(c => c.ok === false).length;
-  h += `<div class="tray" data-tray="1">${left ? Array.from({ length: left }, () => `<div class="handtok ${seat}" data-hand="1">${ROLE[seat].tok}</div>`).join('') + '<span class="lab">tap a station,<br>or drag one there</span>'
+  h += `<div class="tray" data-tray="1">${left ? Array.from({ length: left }, () => `<div class="handtok ${seat}" data-hand="1">${A(ROLE[seat].tok, 64)}</div>`).join('') + '<span class="lab">tap a station,<br>or drag one there</span>'
     : '<span class="lab">All 3 tokens placed. Tap one to change it.</span>'}</div>`;
   h += locked()
-    ? `<button class="btn big" data-act="unplan" ${V.busy ? 'disabled' : ''}>✏️ Change my plan</button>`
+    ? `<button class="btn big" data-act="unplan" ${V.busy ? 'disabled' : ''}>Change my plan</button>`
     : `<button class="btn go big" data-act="ready" ${V.busy ? 'disabled' : ''}>✓ Ready${[plan.length < TOKENS ? `${plan.length}/${TOKENS} placed` : '', doomed ? `${doomed} won't work` : ''].filter(Boolean).map((x, i, a) => (i ? ' · ' : ' (') + x + (i === a.length - 1 ? ')' : '')).join('')}</button>`;
   return h + '</div>';
 }
@@ -257,10 +275,10 @@ function sheetHtml() {
       const trial = editing ? plan.map((x, i) => (i === from ? t : x)) : [...plan, t];
       const c = checkPlan(seat, trial, g, d)[editing ? from : trial.length - 1];
       const cur = editing && editing.verb === o.verb && (editing.opt || null) === (o.opt || null);
-      h += `<button class="opt${cur ? ' cur' : ''}" data-pick='${JSON.stringify(t)}'><span class="l">${esc(o.label)}${cur ? ' ✓' : ''}</span><span class="d">${esc(o.desc)}</span><span class="c ok-${c.ok}">${c.ok === true ? '✓' : c.ok === false ? '✗' : '🤝'} ${esc(c.text)}</span></button>`;
+      h += `<button class="opt${cur ? ' cur' : ''}" data-pick='${JSON.stringify(t)}'><span class="l">${rich(o.label, 26)}${cur ? ' ✓' : ''}</span><span class="d">${rich(o.desc, 18)}</span><span class="c ok-${c.ok}">${mark(c.ok)} ${rich(c.text, 18)}</span></button>`;
     }
   }
-  h += `<div class="row2">${editing ? '<button class="btn" data-act="takeback">↩ Take back</button>' : ''}<button class="btn" data-act="close">Close</button></div></div></div>`;
+  h += `<div class="row2">${editing ? `<button class="btn" data-act="takeback">${A('undo', 22)} Take back</button>` : ''}<button class="btn" data-act="close">Close</button></div></div></div>`;
   return h;
 }
 function openSheet(at, from) {
@@ -272,9 +290,9 @@ function openSheet(at, from) {
   render();
 }
 function pick(t) {
-  if (sheet.from === 'tray') { if (plan.length < TOKENS) plan.push(t); }
-  else if (typeof sheet.from === 'number') plan[sheet.from] = t;
-  if (navigator.vibrate) navigator.vibrate(12);
+  if (sheet.from === 'tray') { if (plan.length < TOKENS) { plan.push(t); justPlaced = plan.length - 1; } }
+  else if (typeof sheet.from === 'number') { plan[sheet.from] = t; justPlaced = sheet.from; }
+  buzz([10, 30, 14]); sfx.select();
   sheet = null; render();
 }
 
@@ -292,7 +310,7 @@ addEventListener('pointermove', e => {
   if (!drag.moved) {
     drag.moved = true;
     drag.ghost = drag.el.cloneNode(true); drag.ghost.classList.add('ghost'); document.body.appendChild(drag.ghost);
-    drag.el.style.opacity = '.3';
+    drag.el.style.opacity = '.3'; buzz(8); sfx.tap();
   }
   drag.ghost.style.left = e.clientX + 'px'; drag.ghost.style.top = e.clientY + 'px';
   const sc = $app.querySelector('.scroll'), r = sc?.getBoundingClientRect();
@@ -332,15 +350,15 @@ $app.addEventListener('click', e => {
   const a = e.target.closest('[data-act]')?.dataset.act;
   if (a && !e.target.closest('[disabled]')) {
     if (a === 'help') return showHelp(roleHelp(seat));
-    if (a === 'book') return showHelp({ icon: '📖', title: 'Recipe book', intro: 'Every dish, and where its ingredients come from.', sections: [
-      { h: 'Dishes', items: def().dishes.map(d => `${recipeText(d)} <b>${DISHES[d].name}</b> · ${'⭐'.repeat(DISHES[d].stars)}`) },
-      { h: 'Ingredients', items: def().crops.map(c => `${CROPS[c].icon} ${CROPS[c].name}: ${ROLE.grower.icon} plants it and waters it ${CROPS[c].need}×, then ${ROLE.cook.icon} picks it${CROPS[c].heavy ? ' (with 🧑‍🌾 lifting)' : ''}.`) },
-      { h: 'Then', items: [`${ROLE.cook.icon} cooks it at the stove and serves it at the counter. All of that can happen in one day, in this order: ${DAY_ORDER.join(' → ')}.`] }] });
+    if (a === 'book') return showHelp({ icon: A('book', 34), title: 'Recipe book', intro: 'Every dish, and where its ingredients come from.', sections: [
+      { h: 'Dishes', items: def().dishes.map(d => `${rich(recipeText(d), 26)} <b>${DISHES[d].name}</b> · ${A('star', 16).repeat(DISHES[d].stars)}`) },
+      { h: 'Ingredients', items: def().crops.map(c => `${A(c, 26)} ${CROPS[c].name}: ${A('grower')} plants it and waters it ${CROPS[c].need}×, then ${A('cook')} picks it${CROPS[c].heavy ? ` (with ${A('grower')} lifting)` : ''}.`) },
+      { h: 'Then', items: [`${A('cook')} cooks it at the stove and serves it at the counter. All of that can happen in one day, in this order: ${DAY_ORDER_TEXT}.`] }] });
     if (a === 'start' || a === 'next' || a === 'retry') act({ a });
     else if (a.startsWith('vote:')) act({ a: 'vote', pick: a.slice(5) });
     else if (a === 'close') sheet = null;
     else if (a === 'takeback' && typeof sheet?.from === 'number') { plan.splice(sheet.from, 1); sheet = null; }
-    else if (a === 'ready') { act({ a: 'plan', plan }); sheet = null; }
+    else if (a === 'ready') { act({ a: 'plan', plan }); sheet = null; buzz(25); sfx.lock(); }
     else if (a === 'unplan') act({ a: 'unplan' });
     return render();
   }

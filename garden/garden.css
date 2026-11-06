@@ -20,25 +20,30 @@
 
 .card { position: relative; border-radius: 18px; background: var(--panel); border: 2px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 6px; min-height: 120px; transition: transform .2s, box-shadow .2s, border-color .2s; }
 .card .ttl { font-size: 14px; color: var(--ink-2); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; display: flex; justify-content: space-between; gap: 6px; }
-.card .big { font-size: 44px; line-height: 1; }
-.card.bed { background: linear-gradient(180deg, var(--panel) 55%, #e9d6bb 55%); }
+.card .big { display: flex; align-items: flex-end; gap: 4px; min-height: 48px; line-height: 1; position: relative; }
+.card .big .items { display: flex; flex-wrap: wrap; align-items: flex-end; }
+.card .big .items > * { margin-left: -6px; }
+.card.bed { background: linear-gradient(180deg, var(--panel) 60%, #efe0c6 60%); }
 .card.ripe { border-color: var(--good); box-shadow: 0 0 0 3px rgba(78, 154, 91, .25); }
 .card.drop { border-color: var(--accent); border-style: dashed; }
 .card.hot { transform: scale(1.04); box-shadow: 0 6px 24px rgba(233, 139, 58, .45); border-color: var(--accent); }
 .card.no { opacity: .45; }
-.pips { display: flex; gap: 4px; }
-.pip { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--leaf); }
-.pip.on { background: var(--leaf); }
 .tag { font-size: 13px; padding: 2px 8px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); color: var(--ink-2); white-space: nowrap; }
 .tag.good { background: var(--good); color: #fff; border-color: var(--good); }
 .tag.bad { background: var(--bad); color: #fff; border-color: var(--bad); }
 .tickets { display: flex; flex-wrap: wrap; gap: 6px; }
-.ticket { display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 10px; background: #fff; border: 1px dashed var(--line); font-size: 15px; }
-.ticket .ico { font-size: 24px; }
+.ticket { position: relative; display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border-radius: 14px; background: #fff; border: 2px solid var(--line); font-size: 15px; transition: transform .3s, opacity .5s; }
+.ticket .cust { display: block; }
+.ticket .want { position: absolute; left: 30px; top: -16px; display: flex; padding: 2px 4px; border-radius: 12px; background: #fff; border: 2px solid var(--line); }
+.ticket.happy { animation: happy .6s ease-in-out 2; }
+.ticket.gone { opacity: 0; transform: translateY(16px) rotate(-6deg); }
+@keyframes happy { 0%, 100% { transform: translateY(0) } 40% { transform: translateY(-14px) scale(1.06) } }
 .ticket.joint { border: 2px solid var(--accent); }
 .ticket.urgent { background: #fde3d6; }
 .toks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
-.tok { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 12px; color: #fff; font-weight: 700; font-size: 15px; }
+.tok { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px 4px 4px; border-radius: 999px; color: #fff; font-weight: 700; font-size: 15px; box-shadow: 0 2px 0 rgba(0, 0, 0, .15); }
+.tok.pop, .handtok.pop { animation: pop .35s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes pop { 0% { transform: scale(.4) } 100% { transform: scale(1) } }
 .tok.grower { background: var(--grower); }
 .tok.cook { background: var(--cook); }
 .bubble { position: absolute; left: 50%; top: -14px; transform: translateX(-50%); white-space: nowrap; background: var(--ink); color: #fff; padding: 4px 10px; border-radius: 999px; font-size: 15px; font-weight: 700; z-index: 2; }
@@ -72,3 +77,23 @@
 .order span { padding: 3px 8px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--line); white-space: nowrap; }
 .order i { font-style: normal; opacity: .6; }
 .order span.now { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* third pass: artwork and the day's little show */
+.ri { margin: 0 1px; vertical-align: -.25em; }
+.plot { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-height: 70px; }
+.plot .plant { margin-bottom: -14px; z-index: 1; transform-origin: 50% 100%; transition: transform .3s; }
+.plot .plant.grow-pop { animation: grow-pop .6s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes grow-pop { 0% { transform: scale(.5) } 100% { transform: scale(1) } }
+.drops { display: inline-flex; gap: 1px; margin-right: 2px; }
+.drops span { opacity: .3; filter: grayscale(1); } .drops span.on { opacity: 1; filter: none; }
+.tag { display: inline-flex; align-items: center; gap: 3px; }
+.dish { position: relative; display: inline-block; }
+.steam { animation: steam 1.8s ease-in-out infinite; transform-origin: center bottom; }
+@keyframes steam { 0% { opacity: 0; transform: translateY(4px) } 40% { opacity: .9 } 100% { opacity: 0; transform: translateY(-8px) } }
+.empty-counter { display: flex; align-items: center; gap: 8px; opacity: .8; }
+.book .plus, .book .eq { font-style: normal; font-weight: 800; color: var(--ink-2); margin: 0 3px; }
+.book .sum { display: inline-flex; align-items: center; }
+.book.compact > svg.art { margin-right: 2px; }
+.order span { display: inline-flex; align-items: center; gap: 4px; }
+.rb svg.art { margin: -3px 0 -3px -4px; }
+.lock span { display: inline-flex; align-items: center; gap: 4px; }

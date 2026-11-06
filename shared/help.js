@@ -4,6 +4,7 @@
 //   helpOnce('lighthouse-keeper', card)   only if this phone has not seen it yet
 //   roleCard({icon, role, goal, can, partner, tips})   the standard shape for a seat
 import { load, save } from './net.js';
+import { art } from './art.js';
 
 let box = null;
 
@@ -34,9 +35,9 @@ export function roleCard({ icon, role, goal, can = [], partner = [], tips = [] }
   return {
     icon, title: `You are the ${role}`, intro: goal,
     sections: [
-      { h: '✅ You can', items: can },
-      ...(partner.length ? [{ h: '🤝 Only your partner can', items: partner }] : []),
-      ...(tips.length ? [{ h: '💡 Tips', items: tips }] : []),
+      { h: art('check', { size: 22 }) + ' You can', items: can },
+      ...(partner.length ? [{ h: art('partner', { size: 22 }) + ' Only your partner can', items: partner }] : []),
+      ...(tips.length ? [{ h: art('bulb', { size: 22 }) + ' Tips', items: tips }] : []),
     ],
   };
 }

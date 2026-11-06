@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Art sheet</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<style>
+  body { padding: 24px; height: auto; }
+  .grid { display: flex; flex-wrap: wrap; gap: 14px; }
+  .cell { width: 120px; padding: 10px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line); text-align: center; font-size: 13px; color: var(--ink-2); }
+  .cell.light { background: #f6efe1; }
+</style>
+</head>
+<body>
+<!-- Every sprite each game registers, at TV and phone size: ?game=lighthouse loads <game>/art.js as well. -->
+<h1>Art sheet</h1>
+<div class="grid" id="grid"></div>
+<script type="module">
+import { art } from '../shared/art.js';
+const game = new URLSearchParams(location.search).get('game');
+const shared = ['check','cross','question','lock','unlock','star','star-empty','sparkle','heart','heart-empty','partner','bulb','sound','mute','arrow-n','arrow-e','arrow-s','arrow-w','undo','wait'];
+let extra = [];
+if (game) { const m = await import(`../${game}/art.js`); extra = m.SPRITES ? Object.keys(m.SPRITES) : []; }
+document.getElementById('grid').innerHTML = [...shared, ...extra].map(n =>
+  `<div class="cell">${art(n, { size: 72 })}<br>${art(n, { size: 24 })}<br>${n}</div>`).join('');
+</script>
+</body>
+</html>
